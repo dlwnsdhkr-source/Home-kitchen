@@ -554,7 +554,7 @@
               <span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-bold">${r.category}</span>
               ${r.spicy ? '<span class="text-[10px] px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md font-bold">🌶️매움</span>' : '<span class="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md font-bold">안매움</span>'}
             </div>
-            <p class="text-xs text-slate-500 mt-1">⏱️ ${r.time || '20분'} · 기본 ${r.servings}인분 · 재료 ${r.ingredients.length}가지</p>
+            <p class="text-xs text-slate-500 mt-1">⏱️ ${r.time || '20분'} · 기본 ${r.servings || r.serving || 2}인분 · 재료 ${r.ingredients.length}가지</p>
           </div>
           <button onclick="addMealPlan('${r.id}', ${r.servings}, '저녁')" class="bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-extrabold hover:bg-blue-100 active:scale-95 transition shrink-0">+ 식단 담기</button>
         </div>
