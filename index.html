@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>우리집 스마트 레시피 & 장보기</title>
+
+  <!-- 모바일 전체 화면 (PWA Standalone) 메타 태그 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="우리집식단">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2921/2921822.png">
+
+  <!-- 단일 파일 내장형 PWA Manifest (Data URI) -->
+  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"우리집 스마트 레시피 & 장보기","short_name":"우리집식단","start_url":"./index.html","display":"standalone","background_color":"#f8fafc","theme_color":"#2563eb","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2921/2921822.png","sizes":"512x512","type":"image/png"}]}'>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDK (Compat v9) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    }
+    .scrollbar-none::-webkit-scrollbar { display: none; }
+    .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen select-none">
+
+  <!-- 상단 고정 헤더 -->
+  <header class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-sm">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-2xl">🍳</span>
+        <div>
+          <h1 class="font-extrabold text-base text-slate-900 leading-tight">우리집 식단 & 장보기</h1>
+          <p id="room-label" class="text-[11px] text-slate-400">로컬 저장소 사용 중</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <button onclick="openSettings()" id="sync-badge" class="text-xs px-2.5 py-1.5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center space-x-1 active:scale-95 transition">
+          <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span id="sync-text">로컬 모드</span>
+        </button>
+        <button onclick="openSettings()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-full text-lg" title="설정">⚙️</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 컨텐츠 컨테이너 -->
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- 탭 1: 레시피 & 메뉴 탐색 -->
+    <section id="tab-recipes" class="space-y-4">
+      <!-- 검색 및 필터 바 -->
+      <div class="flex space-x-2">
+        <input type="text" id="recipe-search" oninput="renderRecipes()" placeholder="메뉴명 또는 보유 재료(예: 두부, 양파) 검색..." class="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
+        <button onclick="openAddRecipeModal()" class="bg-slate-900 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shrink-0 shadow-sm active:scale-95 transition">+ 직접 추가</button>
+      </div>
+
+      <!-- 카테고리 & 안 매운 메뉴 필터 -->
+      <div class="flex space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <button onclick="setFilter('전체')" data-cat="전체" class="cat-btn px-3 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white shrink-0">전체</button>
+        <button onclick="setFilter('한식')" data-cat="한식" class="cat-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 shrink-0">한식</button>
+        <button onclick="setFilter('일식')" data-cat="일식" class="cat-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 shrink-0">일식</button>
+        <button onclick="setFilter('아시안')" data-cat="아시안" class="cat-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 shrink-0">중식·아시안</button>
+        <button onclick="setFilter('안매움')" data-cat="안매움" class="cat-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-emerald-700 shrink-0">👶 아이용(안매움)</button>
+      </div>
+
+      <!-- 랜덤 메뉴 피커 카드 -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-md flex justify-between items-center">
+        <div>
+          <h2 class="font-extrabold text-base">오늘 점심·저녁 뭐 먹지? 🎲</h2>
+          <p class="text-xs text-blue-100 mt-0.5">현재 선택된 필터 안에서 메뉴를 뽑아줍니다.</p>
+        </div>
+        <button onclick="pickRandomMenu()" class="bg-white text-blue-600 px-3.5 py-2 rounded-xl font-extrabold text-xs shadow hover:bg-blue-50 active:scale-95 transition shrink-0">랜덤 추천</button>
+      </div>
+
+      <!-- 레시피 리스트 -->
+      <div id="recipe-list" class="space-y-3"></div>
+    </section>
+
+    <!-- 탭 2: 온라인 AI 레시피 검색 -->
+    <section id="tab-ai" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-extrabold text-slate-900 text-base">🌐 실시간 온라인 AI 레시피 검색</h2>
+          <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-bold">Google 검색 연동</span>
+        </div>
+        <p class="text-xs text-slate-500 leading-relaxed">
+          요리 이름이나 냉장고 속 자투리 재료를 입력하면 온라인 레시피를 검색해 <strong>인분 계산기가 작동하는 정확한 계량 데이터</strong>로 만들어 줍니다.
+        </p>
+        <div class="flex space-x-2">
+          <input type="text" id="ai-query" placeholder="예: 동파육 소스 가지볶음, 안 매운 순두부찌개" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <button onclick="searchOnlineRecipe()" id="ai-search-btn" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shrink-0 shadow active:scale-95 transition">검색</button>
+        </div>
+        <div class="flex flex-wrap gap-1.5 pt-1">
+          <button onclick="quickAiSearch('안 매운 아이용 순두부찌개')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#안매운순두부찌개</button>
+          <button onclick="quickAiSearch('돼지고기 생강구이 쇼가야키')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#쇼가야키</button>
+          <button onclick="quickAiSearch('새우 꿍끄라티암')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#꿍끄라티암</button>
+          <button onclick="quickAiSearch('시금치 프리타타')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#시금치프리타타</button>
+        </div>
+      </div>
+
+      <!-- AI 검색 결과 영역 -->
+      <div id="ai-result-box" class="hidden"></div>
+    </section>
+
+    <!-- 탭 3: 우리 가족 식단표 -->
+    <section id="tab-mealplan" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="font-extrabold text-slate-900 text-base">📅 예정된 식단표</h2>
+            <p class="text-xs text-slate-500 mt-0.5">인분을 조절하면 장보기 합산 수량이 즉시 바뀝니다.</p>
+          </div>
+          <button onclick="clearMealPlan()" class="text-xs text-rose-500 font-bold px-2.5 py-1.5 hover:bg-rose-50 rounded-lg">전체 비우기</button>
+        </div>
+        <div id="selected-meals-list" class="space-y-2.5 pt-1"></div>
+      </div>
+    </section>
+
+    <!-- 탭 4: 장보기 합산 체크리스트 -->
+    <section id="tab-shopping" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="font-extrabold text-slate-900 text-base">🛒 장보기 자동 합산 리스트</h2>
+            <p class="text-xs text-slate-500 mt-0.5">겹치는 재료는 단위별로 합산되고 가족 폰과 실시간 연동됩니다.</p>
+          </div>
+          <button onclick="copyShoppingList()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-xl font-bold shrink-0">📋 카톡 공유 복사</button>
+        </div>
+
+        <!-- 추가 생필품/재료 수동 입력 -->
+        <div class="flex space-x-2 pt-1">
+          <input type="text" id="custom-item-input" onkeydown="if(event.key==='Enter') addCustomShoppingItem()" placeholder="기타 장볼 품목 추가 (예: 우유 1팩, 계란 1판)" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+          <button onclick="addCustomShoppingItem()" class="bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold shrink-0">추가</button>
+        </div>
+
+        <div id="shopping-items" class="divide-y divide-slate-100 pt-1"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 하단 앱 네비게이션 바 -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-30 shadow-lg" style="padding-bottom: env(safe-area-inset-bottom);">
+    <div class="max-w-md mx-auto grid grid-cols-4 py-2">
+      <button onclick="switchTab('recipes')" id="nav-recipes" class="flex flex-col items-center text-blue-600">
+        <span class="text-xl">🍲</span>
+        <span class="text-[11px] font-bold mt-0.5">레시피북</span>
+      </button>
+      <button onclick="switchTab('ai')" id="nav-ai" class="flex flex-col items-center text-slate-400">
+        <span class="text-xl">🌐</span>
+        <span class="text-[11px] font-bold mt-0.5">AI검색</span>
+      </button>
+      <button onclick="switchTab('mealplan')" id="nav-mealplan" class="flex flex-col items-center text-slate-400 relative">
+        <span class="text-xl">📅</span>
+        <span class="text-[11px] font-bold mt-0.5">식단표</span>
+        <span id="meal-badge" class="hidden absolute top-0 right-6 bg-blue-600 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+      </button>
+      <button onclick="switchTab('shopping')" id="nav-shopping" class="flex flex-col items-center text-slate-400">
+        <span class="text-xl">🛒</span>
+        <span class="text-[11px] font-bold mt-0.5">장보기</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- 모달 1: Firebase & API 설정 -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-extrabold text-base text-slate-900">⚙️ 클라우드 동기화 & 앱 설정</h3>
+        <button onclick="closeSettings()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="bg-blue-50 text-blue-800 p-3 rounded-xl leading-relaxed">
+          💡 <strong>Firebase 콘솔</strong>에서 복사한 <code>firebaseConfig</code> 코드를 그대로 붙여넣으면 API 키와 프로젝트 ID를 자동으로 추출해 실시간 연동합니다.
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">1. 우리 가족 공유 방 코드 (Room ID)</label>
+          <input type="text" id="input-room-id" placeholder="예: junoh-family-kitchen" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">2. Firebase Config 코드 붙여넣기</label>
+          <textarea id="input-firebase-config" placeholder="const firebaseConfig = { apiKey: '...', projectId: '...' };" rows="5" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">3. Gemini API 키 (선택 - 온라인 AI 검색용)</label>
+          <input type="password" id="input-gemini-key" placeholder="AIzaSy... (Google AI Studio 무료 키)" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button onclick="copyShareBundle()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-xs">📋 가족 공유코드 복사</button>
+        <button onclick="downloadSelfHtml()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-2.5 rounded-xl font-bold text-xs">💾 index.html 파일 저장</button>
+      </div>
+
+      <div class="flex space-x-2 pt-1">
+        <button onclick="saveSettings()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-extrabold text-sm shadow hover:bg-blue-700">설정 저장 및 연동하기</button>
+        <button onclick="closeSettings()" class="px-4 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 2: 레시피 상세 및 인분 비례 계량기 -->
+  <div id="recipe-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-end sm:items-center justify-center sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[88vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
+      <div id="recipe-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- 모달 3: 새 레시피 직접 추가 -->
+  <div id="add-recipe-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-end sm:items-center justify-center sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+        <h3 class="font-extrabold text-base text-slate-900">📝 나만의 레시피 등록</h3>
+        <button onclick="closeAddRecipeModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-2.5 text-xs">
+        <input type="text" id="new-name" placeholder="요리 이름 (예: 소고기미역국)" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none">
+        <div class="grid grid-cols-3 gap-2">
+          <select id="new-category" class="border border-slate-300 rounded-xl px-2.5 py-2 text-xs outline-none bg-white">
+            <option value="한식">한식</option>
+            <option value="일식">일식</option>
+            <option value="아시안">아시안</option>
+            <option value="양식">양식</option>
+          </select>
+          <input type="number" id="new-servings" value="2" min="1" max="10" placeholder="기본 인분" class="border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none">
+          <label class="flex items-center justify-center space-x-1.5 border border-slate-300 rounded-xl px-2 py-2 cursor-pointer">
+            <input type="checkbox" id="new-spicy" class="rounded text-rose-500">
+            <span>매운 요리🌶️</span>
+          </label>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">재료 입력 (줄바꿈으로 구분: 재료명 수량 단위)</label>
+          <textarea id="new-ingredients" rows="4" placeholder="소고기 200 g&#10;미역 20 g&#10;국간장 2 큰술&#10;다진마늘 1 큰술" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs outline-none"></textarea>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">조리 순서 (줄바꿈으로 구분)</label>
+          <textarea id="new-steps" rows="3" placeholder="불린 미역과 소고기를 참기름에 볶습니다.&#10;물을 붓고 20분간 푹 끓인 뒤 국간장으로 간을 맞춥니다." class="w-full border border-slate-300 rounded-xl p-2.5 text-xs outline-none"></textarea>
+        </div>
+      </div>
+      <button onclick="saveCustomRecipe()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-extrabold text-sm shadow">레시피북에 저장하기</button>
+    </div>
+  </div>
+
+  <script>
+    // 1. 초기 기본 레시피 데이터 (가족 인기 메뉴 7종)
+    const defaultRecipes = [
+      {
+        id: 'r1', name: '차돌된장찌개', category: '한식', servings: 2, time: '20분', spicy: true,
+        ingredients: [
+          { name: '차돌박이', amount: 150, unit: 'g' },
+          { name: '된장', amount: 2, unit: '큰술' },
+          { name: '고추장', amount: 0.5, unit: '큰술' },
+          { name: '두부', amount: 0.5, unit: '모' },
+          { name: '애호박', amount: 0.5, unit: '개' },
+          { name: '양파', amount: 0.5, unit: '개' },
+          { name: '대파', amount: 0.5, unit: '대' },
+          { name: '다진마늘', amount: 1, unit: '큰술' }
+        ],
+        steps: [
+          '냄비에 차돌박이를 살짝 볶아 기름을 낸 뒤 다진마늘을 넣고 향을 냅니다.',
+          '쌀뜨물(또는 물) 500ml를 붓고 된장 2큰술, 고추장 0.5큰술을 풀어 끓입니다.',
+          '깍둑썰기한 애호박, 양파, 두부를 넣고 10분간 중불에서 끓인 뒤 대파를 올려 완성합니다.'
+        ]
+      },
+      {
+        id: 'r2', name: '규동 (일본식 소고기덮밥)', category: '일식', servings: 2, time: '15분', spicy: false,
+        ingredients: [
+          { name: '소고기 불고기용', amount: 250, unit: 'g' },
+          { name: '양파', amount: 1, unit: '개' },
+          { name: '진간장', amount: 3, unit: '큰술' },
+          { name: '맛술', amount: 2, unit: '큰술' },
+          { name: '설탕', amount: 1.5, unit: '큰술' },
+          { name: '계란', amount: 2, unit: '개' },
+          { name: '대파', amount: 0.5, unit: '대' }
+        ],
+        steps: [
+          '냄비에 물 150ml, 진간장, 맛술, 설탕을 넣고 채 썬 양파를 넣어 숨이 죽을 때까지 끓입니다.',
+          '한입 크기로 썬 소고기를 넣고 핏기가 사라질 때까지 중불에서 졸이듯 익힙니다.',
+          '따뜻한 밥 위에 고기와 양파, 국물을 넉넉히 얹고 계란 노른자와 송송 썬 대파를 올립니다.'
+        ]
+      },
+      {
+        id: 'r3', name: '밀푀유나베', category: '한식', servings: 3, time: '25분', spicy: false,
+        ingredients: [
+          { name: '소고기 샤브샤브용', amount: 300, unit: 'g' },
+          { name: '알배기배추', amount: 1, unit: '포기' },
+          { name: '깻잎', amount: 20, unit: '장' },
+          { name: '숙주', amount: 200, unit: 'g' },
+          { name: '표고버섯', amount: 2, unit: '개' },
+          { name: '청경채', amount: 3, unit: '포기' },
+          { name: '국간장', amount: 2, unit: '큰술' }
+        ],
+        steps: [
+          '배추잎 → 깻잎 → 소고기 → 배추잎 순으로 겹겹이 쌓아 5cm 길이로 4등분합니다.',
+          '전골냄비 바닥에 숙주와 청경채를 깔고, 잘라둔 배추·소고기를 가장자리부터 둥글게 돌려 담습니다.',
+          '가운데 표고버섯을 올리고 멸치다시마 육수(물+국간장)를 부어 고기가 익을 때까지 끓입니다.'
+        ]
+      },
+      {
+        id: 'r4', name: '동파육 소스 가지볶음', category: '아시안', servings: 2, time: '15분', spicy: false,
+        ingredients: [
+          { name: '가지', amount: 2, unit: '개' },
+          { name: '다진 돼지고기', amount: 150, unit: 'g' },
+          { name: '굴소스', amount: 1.5, unit: '큰술' },
+          { name: '진간장', amount: 1, unit: '큰술' },
+          { name: '설탕', amount: 1, unit: '큰술' },
+          { name: '다진마늘', amount: 1, unit: '큰술' },
+          { name: '대파', amount: 0.5, unit: '대' }
+        ],
+        steps: [
+          '가지는 어슷하게 큼직히 썰어 팬에 기름을 살짝 두르고 노릇하게 먼저 구워냅니다.',
+          '팬에 대파와 다진마늘을 볶아 파기름을 낸 뒤 다진 돼지고기를 넣고 바짝 볶습니다.',
+          '굴소스, 진간장, 설탕, 물 3큰술을 넣고 구운 가지를 함께 넣어 소스가 배도록 센 불에서 볶아냅니다.'
+        ]
+      },
+      {
+        id: 'r5', name: '쿵팟퐁커리 (태국식 새우커리)', category: '아시안', servings: 2, time: '20분', spicy: false,
+        ingredients: [
+          { name: '칵테일새우', amount: 15, unit: '마리' },
+          { name: '카레가루', amount: 2, unit: '큰술' },
+          { name: '코코넛밀크(또는 우유)', amount: 180, unit: 'ml' },
+          { name: '계란', amount: 2, unit: '개' },
+          { name: '양파', amount: 0.5, unit: '개' },
+          { name: '파프리카', amount: 0.5, unit: '개' },
+          { name: '굴소스', amount: 1, unit: '큰술' }
+        ],
+        steps: [
+          '팬에 버터나 식용유를 두르고 다진마늘, 양파, 파프리카, 새우를 넣고 노릇하게 볶습니다.',
+          '우유(또는 코코넛밀크)와 카레가루, 굴소스를 넣고 약불에서 걸쭉해질 때까지 끓입니다.',
+          '불을 끄기 직전 풀어둔 계란물을 원을 그리며 붓고 부드럽게 저어 스크램블 형태로 완성합니다.'
+        ]
+      },
+      {
+        id: 'r6', name: '안 매운 아이용 순두부찌개', category: '한식', servings: 2, time: '15분', spicy: false,
+        ingredients: [
+          { name: '순두부', amount: 1, unit: '봉' },
+          { name: '다진 소고기', amount: 80, unit: 'g' },
+          { name: '애호박', amount: 0.3, unit: '개' },
+          { name: '양파', amount: 0.3, unit: '개' },
+          { name: '계란', amount: 1, unit: '개' },
+          { name: '국간장', amount: 1, unit: '큰술' },
+          { name: '참기름', amount: 1, unit: '큰술' }
+        ],
+        steps: [
+          '냄비에 참기름을 두르고 다진 소고기와 잘게 썬 애호박, 양파를 달달 볶습니다.',
+          '물 300ml를 붓고 끓어오르면 순두부를 큼직하게 숟가락으로 떠 넣습니다.',
+          '국간장으로 간을 맞추고 마지막에 계란을 풀어 넣어 부드럽게 끓여냅니다.'
+        ]
+      },
+      {
+        id: 'r7', name: '쇼가야키 (돼지고기 생강구이)', category: '일식', servings: 2, time: '15분', spicy: false,
+        ingredients: [
+          { name: '돼지고기 앞다리살(불고기용)', amount: 300, unit: 'g' },
+          { name: '양배추', amount: 150, unit: 'g' },
+          { name: '양파', amount: 0.5, unit: '개' },
+          { name: '다진생강', amount: 1, unit: '큰술' },
+          { name: '진간장', amount: 3, unit: '큰술' },
+          { name: '맛술', amount: 2, unit: '큰술' },
+          { name: '설탕', amount: 1.5, unit: '큰술' }
+        ],
+        steps: [
+          '진간장, 맛술, 설탕, 다진생강을 섞어 쇼가야키 양념장을 만듭니다.',
+          '팬에 돼지고기와 채 썬 양파를 볶다가 고기가 익으면 양념장을 붓고 윤기 나게 졸입니다.',
+          '곱게 채 썬 양배추를 곁들여 접시에 담아냅니다.'
+        ]
+      }
+    ];
+
+    // 2. 상태 변수 초기화
+    let recipes = JSON.parse(localStorage.getItem('kitchen_recipes_v2')) || defaultRecipes;
+    let selectedMeals = JSON.parse(localStorage.getItem('kitchen_meals_v2')) || [];
+    let shoppingChecked = JSON.parse(localStorage.getItem('kitchen_checked_v2')) || {};
+    let customShoppingItems = JSON.parse(localStorage.getItem('kitchen_custom_items_v2')) || [];
+    let currentFilter = '전체';
+    let db = null;
+    let isRemoteUpdating = false;
+    let roomId = localStorage.getItem('kitchen_room_id') || 'home-kitchen-sync';
+
+    // 초기 UI 세팅
+    document.getElementById('input-room-id').value = roomId;
+    document.getElementById('input-firebase-config').value = localStorage.getItem('kitchen_firebase_config') || '';
+    document.getElementById('input-gemini-key').value = localStorage.getItem('kitchen_gemini_key') || '';
+
+    // 3. 안전한 Firebase Config 파서 (콘솔 코드 전체 붙여넣기 지원)
+    function parseFirebaseConfig(raw) {
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        const extract = (key) => {
+          const regex = new RegExp(key + '\\s*:\\s*["\']([^"\']+)["\']');
+          const match = raw.match(regex);
+          return match ? match[1] : undefined;
+        };
+        const apiKey = extract('apiKey');
+        const projectId = extract('projectId');
+        if (!apiKey || !projectId) return null;
+        return {
+          apiKey,
+          authDomain: extract('authDomain') || (projectId + '.firebaseapp.com'),
+          projectId,
+          storageBucket: extract('storageBucket'),
+          messagingSenderId: extract('messagingSenderId'),
+          appId: extract('appId')
+        };
+      }
+    }
+
+    // 4. Firebase Firestore 실시간 동기화 초기화
+    function initFirebase() {
+      const rawConfig = localStorage.getItem('kitchen_firebase_config');
+      const config = parseFirebaseConfig(rawConfig);
+      if (!config) return;
+
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(config);
+        }
+        db = firebase.firestore();
+        document.getElementById('sync-badge').className = 'text-xs px-2.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center space-x-1';
+        document.getElementById('sync-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        document.getElementById('sync-text').textContent = '실시간 동기화 중';
+        document.getElementById('room-label').textContent = '방 코드: ' + roomId;
+
+        db.collection('kitchen_rooms').doc(roomId).onSnapshot((doc) => {
+          if (doc.exists) {
+            isRemoteUpdating = true;
+            const data = doc.data();
+            if (Array.isArray(data.recipes) && data.recipes.length > 0) recipes = data.recipes;
+            if (Array.isArray(data.selectedMeals)) selectedMeals = data.selectedMeals;
+            if (data.shoppingChecked) shoppingChecked = data.shoppingChecked;
+            if (Array.isArray(data.customShoppingItems)) customShoppingItems = data.customShoppingItems;
+
+            saveToLocalOnly();
+            renderAll();
+            isRemoteUpdating = false;
+          } else {
+            syncToCloud();
+          }
+        }, (err) => {
+          console.error('Firestore 실시간 수신 오류:', err);
+          document.getElementById('sync-text').textContent = '연결 오류(규칙 확인)';
+        });
+      } catch (err) {
+        console.error('Firebase 초기화 실패:', err);
+      }
+    }
+
+    function saveToLocalOnly() {
+      localStorage.setItem('kitchen_recipes_v2', JSON.stringify(recipes));
+      localStorage.setItem('kitchen_meals_v2', JSON.stringify(selectedMeals));
+      localStorage.setItem('kitchen_checked_v2', JSON.stringify(shoppingChecked));
+      localStorage.setItem('kitchen_custom_items_v2', JSON.stringify(customShoppingItems));
+    }
+
+    function syncToCloud() {
+      saveToLocalOnly();
+      renderAll();
+      if (db && !isRemoteUpdating) {
+        db.collection('kitchen_rooms').doc(roomId).set({
+          recipes,
+          selectedMeals,
+          shoppingChecked,
+          customShoppingItems,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(e => console.error('클라우드 저장 실패:', e));
+      }
+    }
+
+    // 5. 렌더링 및 탭 제어
+    function renderAll() {
+      renderRecipes();
+      renderMealPlan();
+      renderShoppingList();
+      updateMealBadge();
+    }
+
+    function updateMealBadge() {
+      const badge = document.getElementById('meal-badge');
+      if (selectedMeals.length > 0) {
+        badge.textContent = selectedMeals.length;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function switchTab(tab) {
+      ['recipes', 'ai', 'mealplan', 'shopping'].forEach(t => {
+        document.getElementById('tab-' + t).classList.add('hidden');
+        document.getElementById('nav-' + t).className = 'flex flex-col items-center text-slate-400 relative';
+      });
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+      document.getElementById('nav-' + tab).className = 'flex flex-col items-center text-blue-600 relative';
+      renderAll();
+    }
+
+    function setFilter(cat) {
+      currentFilter = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.className = 'cat-btn px-3 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white shrink-0 shadow-sm';
+        } else {
+          btn.className = 'cat-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 shrink-0';
+        }
+      });
+      renderRecipes();
+    }
+
+    function getFilteredRecipes() {
+      const q = (document.getElementById('recipe-search').value || '').trim().toLowerCase();
+      return recipes.filter(r => {
+        const matchCat = currentFilter === '전체'
+          ? true
+          : currentFilter === '안매움'
+            ? !r.spicy
+            : r.category.includes(currentFilter);
+        const matchQuery = !q
+          || r.name.toLowerCase().includes(q)
+          || r.ingredients.some(i => i.name.toLowerCase().includes(q));
+        return matchCat && matchQuery;
+      });
+    }
+
+    function renderRecipes() {
+      const list = document.getElementById('recipe-list');
+      const filtered = getFilteredRecipes();
+      if (filtered.length === 0) {
+        list.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-xs text-slate-400 border border-slate-200">조건에 맞는 레시피가 없습니다. [AI검색] 탭에서 새로운 레시피를 찾아보세요!</div>`;
+        return;
+      }
+      list.innerHTML = filtered.map(r => `
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex justify-between items-center hover:border-blue-300 transition">
+          <div onclick="openRecipeModal('${r.id}')" class="flex-1 cursor-pointer pr-2">
+            <div class="flex items-center flex-wrap gap-1.5">
+              <span class="font-extrabold text-slate-900 text-sm">${r.name}</span>
+              <span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-bold">${r.category}</span>
+              ${r.spicy ? '<span class="text-[10px] px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md font-bold">🌶️매움</span>' : '<span class="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md font-bold">안매움</span>'}
+            </div>
+            <p class="text-xs text-slate-500 mt-1">⏱️ ${r.time || '20분'} · 기본 ${r.servings}인분 · 재료 ${r.ingredients.length}가지</p>
+          </div>
+          <button onclick="addMealPlan('${r.id}', ${r.servings}, '저녁')" class="bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-extrabold hover:bg-blue-100 active:scale-95 transition shrink-0">+ 식단 담기</button>
+        </div>
+      `).join('');
+    }
+
+    function pickRandomMenu() {
+      const candidates = getFilteredRecipes();
+      if (candidates.length === 0) return alert('현재 필터에 해당하는 메뉴가 없습니다.');
+      const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+      openRecipeModal(chosen.id);
+    }
+
+    // 6. 레시피 상세 및 인분 비례 계산 모달
+    function openRecipeModal(id) {
+      const r = recipes.find(item => item.id === id);
+      if (!r) return;
+      let currentServings = r.servings;
+      let mealType = '저녁';
+
+      const modalContent = document.getElementById('recipe-modal-content');
+
+      function updateView() {
+        const ratio = currentServings / r.servings;
+        modalContent.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold">${r.category}</span>
+                <span class="text-xs text-slate-400">⏱️ ${r.time || '20분'}</span>
+              </div>
+              <h3 class="font-extrabold text-lg text-slate-900 mt-1">${r.name}</h3>
+            </div>
+            <button onclick="closeRecipeModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">✕</button>
+          </div>
+
+          <div class="bg-slate-100 rounded-2xl p-3.5 flex justify-between items-center">
+            <div>
+              <span class="text-xs font-extrabold text-slate-800 block">인분 비례 계량기</span>
+              <span class="text-[11px] text-slate-500">기본 ${r.servings}인분 기준 자동 환산</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <button onclick="changeModalServings(-1)" class="w-8 h-8 rounded-xl bg-white border border-slate-300 font-extrabold text-slate-700 shadow-sm active:scale-95">-</button>
+              <span class="font-extrabold text-base text-blue-600 min-w-[3rem] text-center">${currentServings}인분</span>
+              <button onclick="changeModalServings(1)" class="w-8 h-8 rounded-xl bg-white border border-slate-300 font-extrabold text-slate-700 shadow-sm active:scale-95">+</button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <h4 class="font-extrabold text-slate-800 text-xs">필요 재료 (${currentServings}인분 기준)</h4>
+            <ul class="divide-y divide-slate-100 bg-slate-50 rounded-xl px-3 py-1 text-xs">
+              ${r.ingredients.map(ing => `
+                <li class="py-2 flex justify-between items-center">
+                  <span class="text-slate-700 font-medium">${ing.name}</span>
+                  <span class="font-extrabold text-slate-900">${Math.round(ing.amount * ratio * 10) / 10} ${ing.unit}</span>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+
+          <div class="space-y-1.5">
+            <h4 class="font-extrabold text-slate-800 text-xs">조리 순서</h4>
+            <ol class="list-decimal list-inside text-xs text-slate-600 space-y-1.5 leading-relaxed bg-slate-50 rounded-xl p-3">
+              ${r.steps.map(step => `<li>${step}</li>`).join('')}
+            </ol>
+          </div>
+
+          <div class="flex space-x-2 pt-2">
+            <button onclick="addMealPlan('${r.id}', ${currentServings}, '점심'); closeRecipeModal();" class="flex-1 bg-amber-500 text-white py-3 rounded-xl font-extrabold text-xs shadow active:scale-95">☀️ 점심 식단 담기 (${currentServings}인분)</button>
+            <button onclick="addMealPlan('${r.id}', ${currentServings}, '저녁'); closeRecipeModal();" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-extrabold text-xs shadow active:scale-95">🌙 저녁 식단 담기 (${currentServings}인분)</button>
+          </div>
+          <button onclick="deleteRecipe('${r.id}')" class="w-full text-center text-[11px] text-slate-400 hover:text-rose-500 pt-1">이 레시피 삭제하기</button>
+        `;
+      }
+
+      window.changeModalServings = (delta) => {
+        currentServings = Math.max(1, Math.min(10, currentServings + delta));
+        updateView();
+      };
+
+      updateView();
+      document.getElementById('recipe-modal').classList.remove('hidden');
+    }
+
+    function closeRecipeModal() {
+      document.getElementById('recipe-modal').classList.add('hidden');
+    }
+
+    function deleteRecipe(id) {
+      if (!confirm('이 레시피를 레시피북에서 삭제할까요?')) return;
+      recipes = recipes.filter(r => r.id !== id);
+      closeRecipeModal();
+      syncToCloud();
+    }
+
+    // 7. 식단표 관리 (인분 조절 반영)
+    function addMealPlan(id, targetServings, slot) {
+      const r = recipes.find(item => item.id === id);
+      if (!r) return;
+      selectedMeals.push({
+        planId: 'mp_' + Date.now(),
+        recipeId: r.id,
+        name: r.name,
+        baseServings: r.servings,
+        plannedServings: targetServings || r.servings,
+        slot: slot || '저녁',
+        ingredients: r.ingredients
+      });
+      syncToCloud();
+    }
+
+    function changePlannedServings(idx, delta) {
+      if (!selectedMeals[idx]) return;
+      selectedMeals[idx].plannedServings = Math.max(1, Math.min(10, selectedMeals[idx].plannedServings + delta));
+      syncToCloud();
+    }
+
+    function removeMealPlan(idx) {
+      selectedMeals.splice(idx, 1);
+      syncToCloud();
+    }
+
+    function clearMealPlan() {
+      if (selectedMeals.length === 0) return;
+      if (!confirm('담긴 식단표를 모두 비울까요?')) return;
+      selectedMeals = [];
+      shoppingChecked = {};
+      syncToCloud();
+    }
+
+    function renderMealPlan() {
+      const container = document.getElementById('selected-meals-list');
+      if (selectedMeals.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-8">담긴 식단이 없습니다. 레시피북에서 오늘 먹을 메뉴를 담아보세요!</p>`;
+        return;
+      }
+      container.innerHTML = selectedMeals.map((m, idx) => `
+        <div class="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div>
+            <div class="flex items-center space-x-1.5">
+              <span class="text-[10px] px-2 py-0.5 rounded font-bold ${m.slot === '점심' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'}">${m.slot || '식단'}</span>
+              <h4 class="font-extrabold text-sm text-slate-900">${m.name}</h4>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">기본 ${m.baseServings}인분 레시피</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="changePlannedServings(${idx}, -1)" class="w-7 h-7 rounded-lg bg-white border border-slate-300 font-bold text-xs">-</button>
+            <span class="text-xs font-extrabold text-blue-600 min-w-[2.5rem] text-center">${m.plannedServings}인분</span>
+            <button onclick="changePlannedServings(${idx}, 1)" class="w-7 h-7 rounded-lg bg-white border border-slate-300 font-bold text-xs">+</button>
+            <button onclick="removeMealPlan(${idx})" class="text-xs text-rose-500 font-bold pl-1">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 8. 장보기 리스트 자동 합산 및 체크 동기화
+    function getAggregatedShoppingList() {
+      const map = {};
+      selectedMeals.forEach(meal => {
+        const ratio = (meal.plannedServings || meal.baseServings) / (meal.baseServings || 2);
+        meal.ingredients.forEach(ing => {
+          const key = `${ing.name.trim()}_${ing.unit.trim()}`;
+          if (!map[key]) {
+            map[key] = { key, name: ing.name.trim(), amount: 0, unit: ing.unit.trim(), usedIn: [] };
+          }
+          map[key].amount += ing.amount * ratio;
+          if (!map[key].usedIn.includes(meal.name)) map[key].usedIn.push(meal.name);
+        });
+      });
+      return Object.values(map);
+    }
+
+    function renderShoppingList() {
+      const container = document.getElementById('shopping-items');
+      const items = getAggregatedShoppingList();
+
+      if (items.length === 0 && customShoppingItems.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-8">식단표에 메뉴를 담거나 상단 입력창에서 장볼 품목을 추가해 보세요.</p>`;
+        return;
+      }
+
+      const recipeItemsHtml = items.map(item => {
+        const isChecked = !!shoppingChecked[item.key];
+        const amt = Math.round(item.amount * 10) / 10;
+        return `
+          <div class="flex items-center justify-between py-2.5">
+            <label class="flex items-center space-x-3 cursor-pointer flex-1">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleShoppingCheck('${item.key}')" class="w-4 h-4 text-blue-600 rounded border-slate-300">
+              <div>
+                <span class="text-sm ${isChecked ? 'line-through text-slate-400' : 'text-slate-800 font-bold'}">${item.name}</span>
+                <span class="block text-[10px] text-slate-400">${item.usedIn.join(', ')}</span>
+              </div>
+            </label>
+            <span class="text-sm font-extrabold ${isChecked ? 'line-through text-slate-400' : 'text-blue-600'}">${amt} ${item.unit}</span>
+          </div>
+        `;
+      }).join('');
+
+      const customItemsHtml = customShoppingItems.map((c, idx) => {
+        const key = 'custom_' + c;
+        const isChecked = !!shoppingChecked[key];
+        return `
+          <div class="flex items-center justify-between py-2.5">
+            <label class="flex items-center space-x-3 cursor-pointer flex-1">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleShoppingCheck('${key}')" class="w-4 h-4 text-blue-600 rounded border-slate-300">
+              <span class="text-sm ${isChecked ? 'line-through text-slate-400' : 'text-slate-800 font-bold'}">${c} <span class="text-[10px] text-emerald-600 font-normal">(추가품목)</span></span>
+            </label>
+            <button onclick="removeCustomShoppingItem(${idx})" class="text-xs text-slate-400 hover:text-rose-500 px-2">삭제</button>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = recipeItemsHtml + customItemsHtml;
+    }
+
+    function toggleShoppingCheck(key) {
+      shoppingChecked[key] = !shoppingChecked[key];
+      syncToCloud();
+    }
+
+    function addCustomShoppingItem() {
+      const input = document.getElementById('custom-item-input');
+      const val = input.value.trim();
+      if (!val) return;
+      customShoppingItems.push(val);
+      input.value = '';
+      syncToCloud();
+    }
+
+    function removeCustomShoppingItem(idx) {
+      customShoppingItems.splice(idx, 1);
+      syncToCloud();
+    }
+
+    function copyShoppingList() {
+      const items = getAggregatedShoppingList();
+      const lines = items.map(i => {
+        const mark = shoppingChecked[i.key] ? '✅' : '⬜';
+        return `${mark} ${i.name}: ${Math.round(i.amount * 10) / 10}${i.unit} (${i.usedIn.join(', ')})`;
+      });
+      customShoppingItems.forEach(c => {
+        const mark = shoppingChecked['custom_' + c] ? '✅' : '⬜';
+        lines.push(`${mark} ${c}`);
+      });
+      if (lines.length === 0) return alert('복사할 장보기 품목이 없습니다.');
+      navigator.clipboard.writeText(`[🛒 우리집 장보기 체크리스트]\n` + lines.join('\n')).then(() => {
+        alert('카카오톡이나 메모장에 붙여넣을 수 있도록 장보기 목록이 복사되었습니다!');
+      });
+    }
+
+    // 9. 직접 레시피 추가 모달
+    function openAddRecipeModal() {
+      document.getElementById('add-recipe-modal').classList.remove('hidden');
+    }
+    function closeAddRecipeModal() {
+      document.getElementById('add-recipe-modal').classList.add('hidden');
+    }
+    function saveCustomRecipe() {
+      const name = document.getElementById('new-name').value.trim();
+      const category = document.getElementById('new-category').value;
+      const servings = parseInt(document.getElementById('new-servings').value, 10) || 2;
+      const spicy = document.getElementById('new-spicy').checked;
+      const rawIng = document.getElementById('new-ingredients').value.trim();
+      const rawSteps = document.getElementById('new-steps').value.trim();
+
+      if (!name || !rawIng) return alert('요리 이름과 재료를 입력해주세요.');
+
+      const ingredients = rawIng.split('\n').map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 3) {
+          const unit = parts.pop();
+          const amount = parseFloat(parts.pop()) || 1;
+          return { name: parts.join(' '), amount, unit };
+        } else if (parts.length === 2) {
+          return { name: parts[0], amount: parseFloat(parts[1]) || 1, unit: '개' };
+        }
+        return { name: line.trim(), amount: 1, unit: '적당량' };
+      });
+
+      const steps = rawSteps ? rawSteps.split('\n').map(s => s.trim()).filter(Boolean) : ['재료를 손질해 조리합니다.'];
+
+      recipes.unshift({
+        id: 'r_' + Date.now(),
+        name, category, servings, time: '20분', spicy, ingredients, steps
+      });
+
+      closeAddRecipeModal();
+      syncToCloud();
+    }
+
+    // 10. 실시간 온라인 AI 레시피 검색 (Gemini API + Google Search 연동)
+    function quickAiSearch(q) {
+      document.getElementById('ai-query').value = q;
+      searchOnlineRecipe();
+    }
+
+    async function searchOnlineRecipe() {
+      const query = document.getElementById('ai-query').value.trim();
+      if (!query) return alert('검색할 요리명이나 재료를 입력해 주세요.');
+
+      const apiKey = localStorage.getItem('kitchen_gemini_key');
+      if (!apiKey) {
+        alert('온라인 AI 레시피 검색을 사용하려면 우측 상단 [⚙️ 설정]에서 무료 Gemini API 키를 입력해 주세요.');
+        openSettings();
+        return;
+      }
+
+      const btn = document.getElementById('ai-search-btn');
+      const box = document.getElementById('ai-result-box');
+      btn.disabled = true;
+      btn.textContent = '검색중...';
+      box.classList.remove('hidden');
+      box.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-xs text-slate-500 border border-slate-200 animate-pulse">🔍 온라인에서 '${query}' 황금레시피와 계량 수치를 검색하고 있습니다...</div>`;
+
+      const prompt = `사용자가 요청한 요리/재료: "${query}".
+실제 요리 레시피를 바탕으로 2인분 기준의 정확한 재료 수치와 조리 순서를 아래 JSON 형식으로만 응답해줘. 마크다운 코드블록 없이 순수 JSON만 출력해.
+{"name":"요리명","category":"한식 또는 일식 또는 아시안 또는 양식","servings":2,"time":"20분","spicy":false,"ingredients":[{"name":"재료명","amount":150,"unit":"g"}],"steps":["1단계 설명","2단계 설명"]}`;
+
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }]
+          })
+        });
+        const data = await res.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('레시피 데이터를 추출하지 못했습니다.');
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        parsed.id = 'ai_' + Date.now();
+        window.lastAiRecipe = parsed;
+
+        box.innerHTML = `
+          <div class="bg-white rounded-2xl p-4 border-2 border-indigo-500 shadow-md space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-[11px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">✨ AI 실시간 레시피 검색 완료</span>
+              <span class="text-xs text-slate-400">기본 ${parsed.servings}인분 · ${parsed.time}</span>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900">${parsed.name}</h3>
+            <ul class="divide-y divide-slate-100 bg-slate-50 rounded-xl px-3 py-1 text-xs">
+              ${parsed.ingredients.map(i => `<li class="py-1.5 flex justify-between"><span>${i.name}</span><span class="font-bold">${i.amount}${i.unit}</span></li>`).join('')}
+            </ul>
+            <ol class="list-decimal list-inside text-xs text-slate-600 space-y-1">
+              ${parsed.steps.map(s => `<li>${s}</li>`).join('')}
+            </ol>
+            <button onclick="saveAiRecipeToBook()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-extrabold text-xs shadow">📥 내 클라우드 레시피북에 영구 저장 및 식단 담기</button>
+          </div>
+        `;
+      } catch (e) {
+        box.innerHTML = `<div class="bg-rose-50 text-rose-700 p-4 rounded-2xl text-xs">검색 중 오류가 발생했습니다: ${e.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '검색';
+      }
+    }
+
+    function saveAiRecipeToBook() {
+      if (!window.lastAiRecipe) return;
+      recipes.unshift(window.lastAiRecipe);
+      addMealPlan(window.lastAiRecipe.id, window.lastAiRecipe.servings, '저녁');
+      alert(`'${window.lastAiRecipe.name}' 레시피가 저장되고 저녁 식단에 담겼습니다!`);
+      switchTab('recipes');
+    }
+
+    // 11. 설정 저장, 가족 공유코드 복사, 단일 HTML 파일 자체 다운로드
+    function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
+    function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+
+    function saveSettings() {
+      const room = document.getElementById('input-room-id').value.trim() || 'home-kitchen-sync';
+      const config = document.getElementById('input-firebase-config').value.trim();
+      const geminiKey = document.getElementById('input-gemini-key').value.trim();
+
+      localStorage.setItem('kitchen_room_id', room);
+      localStorage.setItem('kitchen_firebase_config', config);
+      localStorage.setItem('kitchen_gemini_key', geminiKey);
+      roomId = room;
+      closeSettings();
+      location.reload();
+    }
+
+    function copyShareBundle() {
+      const config = document.getElementById('input-firebase-config').value.trim();
+      if (!config) return alert('먼저 Firebase Config 코드를 입력해 주세요.');
+      navigator.clipboard.writeText(config).then(() => {
+        alert(`Firebase 연결 코드가 복사되었습니다!\n가족 스마트폰의 [⚙️ 설정] 창에 붙여넣고 방 코드를 '${roomId}'로 맞추면 즉시 동기화됩니다.`);
+      });
+    }
+
+    function downloadSelfHtml() {
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // 12. PWA 설치 인식용 인라인 서비스워커 등록 (HTTPS/GitHub Pages 환경 작동)
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      const swCode = `self.addEventListener('fetch', function(e) {});`;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
+
+    // 앱 최초 실행
+    initFirebase();
+    renderAll();
+  </script>
+</body>
+</html>
