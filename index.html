@@ -550,7 +550,7 @@
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex justify-between items-center hover:border-blue-300 transition">
           <div onclick="openRecipeModal('${r.id}')" class="flex-1 cursor-pointer pr-2">
             <div class="flex items-center flex-wrap gap-1.5">
-              <span class="font-extrabold text-slate-900 text-sm">${r.name}</span>
+              <span class="font-extrabold text-slate-900 text-sm">${r.name || r.title || '메뉴명 없음'}</span>
               <span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-bold">${r.category}</span>
               ${r.spicy ? '<span class="text-[10px] px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md font-bold">🌶️매움</span>' : '<span class="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md font-bold">안매움</span>'}
             </div>
