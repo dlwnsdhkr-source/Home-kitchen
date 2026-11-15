@@ -88,7 +88,7 @@
       <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-extrabold text-slate-900 text-base">🌐 실시간 온라인 AI 레시피 검색</h2>
-          <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-bold">Gemini AI 연동</span>
+          <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-bold">Gemini 3.0 자동연동</span>
         </div>
         <p class="text-xs text-slate-500 leading-relaxed">
           요리 이름이나 냉장고 속 자투리 재료를 입력하면 AI가 <strong>인분 계산기가 작동하는 정확한 계량 레시피</strong>로 만들어 줍니다.
@@ -247,7 +247,6 @@
   </div>
 
   <script>
-    // 1. 초기 기본 레시피 데이터
     const defaultRecipes = [
       {
         id: 'r1', name: '차돌된장찌개', category: '한식', servings: 2, time: '20분', spicy: true,
@@ -354,11 +353,9 @@
       }
     ];
 
-    // ★ 데이터 정규화 함수 (undefined 및 NaN 원천 방지)
     function normalizeRecipe(r, idx) {
       if (!r || typeof r !== 'object') return defaultRecipes[0];
       const rawName = r.name || r.title || r.menuName || '';
-      // 만약 첫 번째 재료가 차돌박이인데 이름이 없으면 '차돌된장찌개' 등으로 자동 매칭
       let fallbackName = '이름 없는 메뉴';
       const firstIng = r.ingredients?.[0]?.name || '';
       if (firstIng.includes('차돌')) fallbackName = '차돌된장찌개';
@@ -393,12 +390,10 @@
     function normalizeRecipeList(list) {
       if (!Array.isArray(list) || list.length === 0) return defaultRecipes;
       const normalized = list.map((item, idx) => normalizeRecipe(item, idx));
-      // 만약 모든 항목이 이름이 깨진 상태라면 기본 레시피로 자동 교체
       const allBroken = normalized.every(r => !list.find(o => o.name || o.title));
       return allBroken ? defaultRecipes : normalized;
     }
 
-    // 2. 상태 변수 초기화
     let recipes = normalizeRecipeList(JSON.parse(localStorage.getItem('kitchen_recipes_v2') || 'null'));
     let selectedMeals = JSON.parse(localStorage.getItem('kitchen_meals_v2') || '[]');
     let shoppingChecked = JSON.parse(localStorage.getItem('kitchen_checked_v2') || '{}');
@@ -412,7 +407,6 @@
     document.getElementById('input-firebase-config').value = localStorage.getItem('kitchen_firebase_config') || '';
     document.getElementById('input-gemini-key').value = localStorage.getItem('kitchen_gemini_key') || '';
 
-    // 3. 안전한 Firebase Config 파서
     function parseFirebaseConfig(raw) {
       if (!raw) return null;
       try {
@@ -437,7 +431,6 @@
       }
     }
 
-    // 4. Firebase Firestore 실시간 동기화 초기화
     function initFirebase() {
       const rawConfig = localStorage.getItem('kitchen_firebase_config');
       const config = parseFirebaseConfig(rawConfig);
@@ -458,7 +451,6 @@
             isRemoteUpdating = true;
             const data = doc.data();
             if (Array.isArray(data.recipes) && data.recipes.length > 0) {
-              // 기존 깨진 데이터가 감지되면 깨끗한 정규화 데이터로 자동 복구
               const hasUndefinedName = data.recipes.some(r => !r.name && !r.title);
               recipes = normalizeRecipeList(data.recipes);
               if (hasUndefinedName) {
@@ -475,9 +467,6 @@
           } else {
             syncToCloud();
           }
-        }, (err) => {
-          console.error('Firestore 실시간 수신 오류:', err);
-          document.getElementById('sync-text').textContent = '연결 오류(규칙 확인)';
         });
       } catch (err) {
         console.error('Firebase 초기화 실패:', err);
@@ -515,7 +504,6 @@
       alert('기본 레시피로 깨끗하게 복구되었습니다!');
     }
 
-    // 5. 렌더링 및 탭 제어
     function renderAll() {
       renderRecipes();
       renderMealPlan();
@@ -599,7 +587,6 @@
       openRecipeModal(chosen.id);
     }
 
-    // 6. 레시피 상세 및 인분 비례 계산 모달 (NaN 방지 완벽 적용)
     function openRecipeModal(id) {
       const rawRecipe = recipes.find(item => String(item.id) === String(id));
       if (!rawRecipe) return;
@@ -684,7 +671,6 @@
       syncToCloud();
     }
 
-    // 7. 식단표 관리
     function addMealPlan(id, targetServings, slot) {
       const raw = recipes.find(item => String(item.id) === String(id));
       if (!raw) return;
@@ -751,7 +737,6 @@
       }).join('');
     }
 
-    // 8. 장보기 리스트 자동 합산
     function getAggregatedShoppingList() {
       const map = {};
       selectedMeals.forEach(meal => {
@@ -852,7 +837,6 @@
       });
     }
 
-    // 9. 직접 레시피 추가 모달
     function openAddRecipeModal() { document.getElementById('add-recipe-modal').classList.remove('hidden'); }
     function closeAddRecipeModal() { document.getElementById('add-recipe-modal').classList.add('hidden'); }
 
@@ -889,13 +873,26 @@
       syncToCloud();
     }
 
-    // 10. 강화된 AI 레시피 검색 (다중 파트 파싱 및 JSON 강제 모드로 추출 실패 원천 차단)
     function quickAiSearch(q) {
       document.getElementById('ai-query').value = q;
       searchOnlineRecipe();
     }
 
+    // ★ gemini-3.0-flash 1순위 적용 + 사용 가능 최신 Flash 모델 자동 탐색
     async function callGeminiRecipeApi(apiKey, prompt, useSearchTool) {
+      let modelList = ['models/gemini-3.0-flash', 'models/gemini-2.0-flash'];
+
+      try {
+        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const listData = await listRes.json();
+        if (listData.models) {
+          const available = listData.models
+            .filter(m => m.name.includes('flash') && !m.name.includes('2.5') && (m.supportedGenerationMethods || []).includes('generateContent'))
+            .map(m => m.name);
+          modelList = [...new Set([...modelList, ...available])];
+        }
+      } catch (e) {}
+
       const payload = {
         contents: [{ parts: [{ text: prompt }] }]
       };
@@ -905,25 +902,32 @@
         payload.generationConfig = { responseMimeType: "application/json" };
       }
 
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+      let lastError = null;
+      for (const modelName of modelList) {
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+          const data = await res.json();
+          if (data.error) {
+            lastError = new Error(data.error.message || 'API 호출 오류');
+            continue;
+          }
 
-      const data = await res.json();
-      if (data.error) {
-        throw new Error(data.error.message || 'API 호출 오류');
+          const parts = data?.candidates?.[0]?.content?.parts || [];
+          const fullText = parts.map(p => p.text || '').join('\n');
+          const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('JSON 응답 없음');
+
+          return JSON.parse(jsonMatch[0]);
+        } catch (err) {
+          lastError = err;
+        }
       }
-
-      // 모든 parts의 텍스트를 하나로 합침 (추론 토큰으로 인해 parts[0]이 비어있는 문제 해결)
-      const parts = data?.candidates?.[0]?.content?.parts || [];
-      const fullText = parts.map(p => p.text || '').join('\n');
-      const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('JSON 응답 없음');
-
-      return JSON.parse(jsonMatch[0]);
+      throw lastError || new Error('사용 가능한 모델을 찾지 못했습니다.');
     }
 
     async function searchOnlineRecipe() {
@@ -951,10 +955,8 @@
       try {
         let parsed;
         try {
-          // 1차: JSON 강제 응답 모드로 빠르고 정확하게 생성
           parsed = await callGeminiRecipeApi(apiKey, prompt, false);
         } catch (firstErr) {
-          // 2차: 구글 검색 연동 모드로 재시도
           parsed = await callGeminiRecipeApi(apiKey, prompt, true);
         }
 
@@ -996,7 +998,6 @@
       switchTab('recipes');
     }
 
-    // 11. 설정 모달 제어
     function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
     function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
 
