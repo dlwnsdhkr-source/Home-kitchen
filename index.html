@@ -1124,9 +1124,9 @@
 
     async function streamFastGeminiRecipe(apiKey, prompt, onPartialText) {
       const modelsToTry = [
+        'models/gemini-3.8-flash',
         'models/gemini-3.0-flash',
-        'models/gemini-2.5-flash',
-        'models/gemini-1.5-flash'
+        'models/gemini-2.5-flash'
       ];
 
       let lastErr = null;
