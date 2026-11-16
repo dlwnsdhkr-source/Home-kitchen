@@ -10,7 +10,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="우리집식단">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="referrer" content="no-referrer">
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2921/2921822.png">
   <link rel="manifest" href="./manifest.json">
 
@@ -42,7 +43,7 @@
         <div>
           <div class="flex items-center space-x-1.5">
             <h1 class="font-extrabold text-base text-slate-900 leading-tight">우리집 식단 & 냉장고</h1>
-            <span class="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-extrabold">Turbo v2</span>
+            <span class="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-extrabold">만개의레시피 연동</span>
           </div>
           <p id="room-label" class="text-[11px] text-slate-400">로컬 저장소 사용 중</p>
         </div>
@@ -63,7 +64,7 @@
     <!-- 탭 1: 레시피 & 메뉴 탐색 -->
     <section id="tab-recipes" class="space-y-4">
       <div class="flex space-x-2">
-        <input type="text" id="recipe-search" oninput="renderRecipes()" placeholder="메뉴명 또는 재료(예: 두부, 양파) 검색..." class="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
+        <input type="text" id="recipe-search" oninput="renderRecipes()" placeholder="보관된 메뉴명 또는 재료(예: 두부, 양파) 검색..." class="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
         <button onclick="openAddRecipeModal()" class="bg-slate-900 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shrink-0 shadow-sm active:scale-95 transition">+ 직접 추가</button>
       </div>
 
@@ -111,8 +112,8 @@
         <div class="pt-2 border-t border-slate-100">
           <div class="flex justify-between items-center mb-2">
             <span class="text-xs font-extrabold text-slate-700">현재 냉장고 속 재료 (터치하여 삭제)</span>
-            <button onclick="aiCookWithFridge()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl font-extrabold shadow active:scale-95 transition">
-              ⚡ 보유 재료로 AI 초고속 요리 추천
+            <button onclick="searchWithFridgeOn10000()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-extrabold shadow active:scale-95 transition">
+              🏆 보유 재료로 만개의레시피 인기검색
             </button>
           </div>
           <div id="fridge-items-list" class="flex flex-wrap gap-1.5 min-h-[2.5rem] items-center"></div>
@@ -125,31 +126,33 @@
       </div>
     </section>
 
-    <!-- 탭 3: 초고속 온라인 AI 레시피 검색 -->
+    <!-- 탭 3: 만개의레시피 추천순 1위 실시간 검색 (API 불필요) -->
     <section id="tab-ai" class="space-y-4 hidden">
       <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-extrabold text-slate-900 text-base">⚡ 초고속 AI 레시피 생성기</h2>
-          <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">8초 타임아웃 보호</span>
+          <h2 class="font-extrabold text-slate-900 text-base">🏆 만개의레시피 추천순 검색</h2>
+          <span class="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-extrabold">API 무제한 · 무료</span>
         </div>
         <p class="text-xs text-slate-500 leading-relaxed">
-          무한 로딩을 원천 차단하고 <strong>직행 JSON 호출과 로컬 캐시</strong>를 통해 1~2초 내로 정확한 계량 레시피를 생성합니다.
+          API 키 소모 없이 <strong>만개의레시피(10000recipe.com)에서 추천수가 가장 많은 레시피</strong>를 찾아 인분 계산기가 작동하는 계량 데이터로 즉시 변환합니다.
         </p>
         <div class="flex space-x-2">
-          <input type="text" id="ai-query" onkeydown="if(event.key==='Enter') searchOnlineRecipe(false)" placeholder="요리명 또는 재료 조합 (예: 두부조림, 시금치 프리타타)" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-          <button onclick="searchOnlineRecipe(false)" id="ai-search-btn" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shrink-0 shadow active:scale-95 transition">⚡ 즉시생성</button>
+          <input type="text" id="ai-query" onkeydown="if(event.key==='Enter') searchOnlineRecipe(false)" placeholder="요리명 또는 재료 입력 (예: 두부조림, 제육볶음)" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+          <button onclick="searchOnlineRecipe(false)" id="ai-search-btn" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shrink-0 shadow active:scale-95 transition">🏆 인기검색</button>
         </div>
 
         <div class="flex flex-wrap gap-1.5 pt-1">
-          <button onclick="aiCookWithFridge()" class="text-[11px] bg-cyan-50 border border-cyan-200 text-cyan-800 font-bold px-2.5 py-1 rounded-full">🧊 내 냉장고 재료로 추천받기</button>
-          <button onclick="quickAiSearch('밥도둑 두부조림')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#두부조림</button>
-          <button onclick="quickAiSearch('시금치 프리타타')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#시금치프리타타</button>
-          <button onclick="quickAiSearch('안 매운 아이용 마파두부')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#아이용마파두부</button>
-          <button onclick="quickAiSearch('대패삼겹 숙주볶음')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#대패삼겹숙주볶음</button>
+          <button onclick="searchWithFridgeOn10000()" class="text-[11px] bg-cyan-50 border border-cyan-200 text-cyan-800 font-bold px-2.5 py-1 rounded-full">🧊 내 냉장고 재료로 인기검색</button>
+          <button onclick="quickAiSearch('두부조림')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#두부조림</button>
+          <button onclick="quickAiSearch('제육볶음')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#제육볶음</button>
+          <button onclick="quickAiSearch('소고기미역국')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#소고기미역국</button>
+          <button onclick="quickAiSearch('어묵볶음')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#어묵볶음</button>
+          <button onclick="quickAiSearch('시금치프리타타')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#시금치프리타타</button>
         </div>
       </div>
 
-      <div id="ai-result-box" class="hidden"></div>
+      <!-- 검색된 추천순 TOP 5 선택 바 & 상세 결과 카드 -->
+      <div id="ai-result-box" class="hidden space-y-3"></div>
     </section>
 
     <!-- 탭 4: 요일별(월~일) 주간 식단 캘린더 -->
@@ -203,8 +206,8 @@
         <span id="fridge-badge" class="hidden absolute top-0 right-4 bg-cyan-600 text-white text-[9px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center">0</span>
       </button>
       <button onclick="switchTab('ai')" id="nav-ai" class="flex flex-col items-center text-slate-400 relative">
-        <span class="text-lg">⚡</span>
-        <span class="text-[10px] font-bold mt-0.5">AI초고속</span>
+        <span class="text-lg">🏆</span>
+        <span class="text-[10px] font-bold mt-0.5">만개의검색</span>
       </button>
       <button onclick="switchTab('mealplan')" id="nav-mealplan" class="flex flex-col items-center text-slate-400 relative">
         <span class="text-lg">📅</span>
@@ -218,11 +221,11 @@
     </div>
   </nav>
 
-  <!-- 모달 1: Firebase & API 설정 -->
+  <!-- 모달 1: Firebase 클라우드 동기화 설정 -->
   <div id="settings-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-extrabold text-base text-slate-900">⚙️ 클라우드 동기화 & 속도 설정</h3>
+        <h3 class="font-extrabold text-base text-slate-900">⚙️ 클라우드 동기화 & 캐시 설정</h3>
         <button onclick="closeSettings()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
       </div>
 
@@ -235,11 +238,6 @@
         <div>
           <label class="block font-bold text-slate-700 mb-1">2. Firebase Config 코드 붙여넣기</label>
           <textarea id="input-firebase-config" placeholder="const firebaseConfig = { apiKey: '...', projectId: '...' };" rows="4" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">3. Gemini API 키 (초고속 AI 검색용)</label>
-          <input type="password" id="input-gemini-key" placeholder="AIzaSy... (Google AI Studio 무료 키)" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
       </div>
 
@@ -300,9 +298,6 @@
   <script>
     const DAYS_OF_WEEK = ['월', '화', '수', '목', '금', '토', '일'];
     const FRIDGE_PRESETS = ['계란', '두부', '양파', '대파', '다진마늘', '애호박', '감자', '양배추', '김치', '삼겹살', '차돌박이', '소고기', '닭고기', '우유', '슬라이스치즈', '진간장', '고추장', '된장', '굴소스'];
-
-    // 이전 버전에서 잘못 캐싱된 모델명이 있으면 시작 시 자동 정리
-    localStorage.removeItem('kitchen_fast_model');
 
     const defaultRecipes = [
       {
@@ -439,6 +434,9 @@
         servings: validServings,
         time: String(r.time || r.cookTime || '20분').trim(),
         spicy: Boolean(r.spicy ?? r.isSpicy ?? false),
+        thumb: r.thumb || '',
+        sourceUrl: r.sourceUrl || '',
+        recommendCount: r.recommendCount || '',
         ingredients: cleanIngredients,
         steps: Array.isArray(r.steps) ? r.steps.map(s => String(s)) : ['재료를 준비해 조리합니다.']
       };
@@ -461,17 +459,17 @@
     let shoppingChecked = JSON.parse(localStorage.getItem('kitchen_checked_v2') || '{}');
     let customShoppingItems = JSON.parse(localStorage.getItem('kitchen_custom_items_v2') || '[]');
     let fridgeItems = JSON.parse(localStorage.getItem('kitchen_fridge_v2') || '["계란", "양파", "대파", "다진마늘"]');
-    let aiSearchCache = JSON.parse(localStorage.getItem('kitchen_ai_cache_v2') || '{}');
+    let recipe10000Cache = JSON.parse(localStorage.getItem('kitchen_10000_cache_v1') || '{}');
 
     let currentFilter = '전체';
     let currentDayFilter = '전체';
     let db = null;
     let isRemoteUpdating = false;
     let roomId = localStorage.getItem('kitchen_room_id') || 'home-kitchen-sync';
+    let currentTopCandidates = [];
 
     document.getElementById('input-room-id').value = roomId;
     document.getElementById('input-firebase-config').value = localStorage.getItem('kitchen_firebase_config') || '';
-    document.getElementById('input-gemini-key').value = localStorage.getItem('kitchen_gemini_key') || '';
 
     function isIngredientInFridge(ingName) {
       const clean = String(ingName || '').trim().toLowerCase();
@@ -657,7 +655,7 @@
       const list = document.getElementById('recipe-list');
       const filtered = getFilteredRecipes();
       if (filtered.length === 0) {
-        list.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-xs text-slate-400 border border-slate-200">조건에 맞는 레시피가 없습니다. [⚡AI초고속] 탭에서 새로운 레시피를 찾아보세요!</div>`;
+        list.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-xs text-slate-400 border border-slate-200">조건에 맞는 레시피가 없습니다. [🏆만개의검색] 탭에서 인기 레시피를 찾아보세요!</div>`;
         return;
       }
       list.innerHTML = filtered.map(r => {
@@ -708,7 +706,7 @@
         .sort((a, b) => b.cnt - a.cnt);
 
       if (matched.length === 0) {
-        matchedBox.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">일치하는 레시피가 없습니다. [⚡ 보유 재료로 AI 초고속 요리 추천]을 눌러보세요!</p>`;
+        matchedBox.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">일치하는 레시피가 없습니다. [🏆 보유 재료로 만개의레시피 인기검색]을 눌러보세요!</p>`;
       } else {
         matchedBox.innerHTML = matched.map(({ r, cnt }) => {
           const missing = r.ingredients.filter(i => !isIngredientInFridge(i.name)).map(i => i.name);
@@ -748,15 +746,18 @@
       syncToCloud();
     }
 
-    function aiCookWithFridge() {
+    function searchWithFridgeOn10000() {
       if (fridgeItems.length === 0) {
         alert('먼저 냉장고에 있는 재료를 1개 이상 등록해 주세요!');
         switchTab('fridge');
         return;
       }
-      const query = `${fridgeItems.slice(0, 5).join(', ')} 활용한 맛있는 집밥 요리`;
+      // 기본 양념(진간장, 다진마늘 등)을 제외한 주재료 2개를 조합해 만개의레시피에서 가장 인기 있는 요리 검색
+      const seasonings = ['진간장', '국간장', '고추장', '된장', '굴소스', '다진마늘', '설탕', '소금', '대파'];
+      const mainItems = fridgeItems.filter(i => !seasonings.includes(i));
+      const picked = (mainItems.length > 0 ? mainItems : fridgeItems).slice(0, 2).join(' ');
       switchTab('ai');
-      document.getElementById('ai-query').value = query;
+      document.getElementById('ai-query').value = picked;
       searchOnlineRecipe(false);
     }
 
@@ -784,6 +785,7 @@
               <div class="flex items-center space-x-1.5">
                 <span class="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold">${r.category}</span>
                 <span class="text-xs text-slate-400">⏱️ ${r.time}</span>
+                ${r.sourceUrl ? `<a href="${r.sourceUrl}" target="_blank" class="text-[11px] text-emerald-600 underline font-bold">원본 레시피 ↗</a>` : ''}
               </div>
               <h3 class="font-extrabold text-lg text-slate-900 mt-1">${r.name}</h3>
             </div>
@@ -1093,18 +1095,7 @@
 
       if (!name || !rawIng) return alert('요리 이름과 재료를 입력해주세요.');
 
-      const ingredients = rawIng.split('\n').map(line => {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length >= 3) {
-          const unit = parts.pop();
-          const amount = parseFloat(parts.pop()) || 1;
-          return { name: parts.join(' '), amount, unit };
-        } else if (parts.length === 2) {
-          return { name: parts[0], amount: parseFloat(parts[1]) || 1, unit: '개' };
-        }
-        return { name: line.trim(), amount: 1, unit: '적당량' };
-      });
-
+      const ingredients = rawIng.split('\n').map(line => parseIngredientText(line));
       const steps = rawSteps ? rawSteps.split('\n').map(s => s.trim()).filter(Boolean) : ['재료를 손질해 조리합니다.'];
 
       recipes.unshift(normalizeRecipe({
@@ -1116,63 +1107,240 @@
       syncToCloud();
     }
 
-    // ⚡ 무한 로딩 방지(8초 AbortController) + 직행 고속 호출 엔진
+    // =========================================================================
+    // 🏆 만개의레시피(10000recipe.com) 추천순(order=reco) 크롤러 & 계량 자동 파서
+    // =========================================================================
+
     function quickAiSearch(q) {
       document.getElementById('ai-query').value = q;
       searchOnlineRecipe(false);
     }
 
-    async function streamFastGeminiRecipe(apiKey, prompt, onPartialText) {
-      const modelsToTry = [
-        'models/gemini-3.8-flash',
-        'models/gemini-3.0-flash',
-        'models/gemini-2.5-flash'
+    // 다중 CORS 프록시 병렬 경쟁 호출 (가장 먼저 도착한 응답 채택)
+    async function fetchHtmlFast(targetUrl) {
+      const encoded = encodeURIComponent(targetUrl);
+      const proxyUrls = [
+        `https://corsproxy.io/?${encoded}`,
+        `https://api.allorigins.win/raw?url=${encoded}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encoded}`
       ];
 
-      let lastErr = null;
-
-      for (const modelName of modelsToTry) {
+      const fetchOne = async (pUrl) => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-
+        const timer = setTimeout(() => controller.abort(), 7500);
         try {
-          if (onPartialText) onPartialText(`${modelName.replace('models/', '')} 모델로 빠르게 생성 중...`);
-
-          const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.2
-              }
-            })
-          });
-
-          clearTimeout(timeoutId);
-          const data = await res.json();
-
-          if (!res.ok || data.error) {
-            lastErr = new Error(data?.error?.message || `HTTP ${res.status}`);
-            continue;
-          }
-
-          const parts = data?.candidates?.[0]?.content?.parts || [];
-          const fullText = parts.map(p => p.text || '').join('\n');
-          const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-          if (!jsonMatch) throw new Error('JSON 응답 형식 오류');
-
-          return JSON.parse(jsonMatch[0]);
-        } catch (err) {
-          clearTimeout(timeoutId);
-          lastErr = err.name === 'AbortError' ? new Error('응답 시간 초과 (8초)') : err;
+          const res = await fetch(pUrl, { signal: controller.signal });
+          clearTimeout(timer);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const text = await res.text();
+          if (!text || text.length < 300) throw new Error('Empty HTML');
+          return text;
+        } catch (e) {
+          clearTimeout(timer);
+          throw e;
         }
+      };
+
+      return await Promise.any(proxyUrls.map(fetchOne));
+    }
+
+    // "대파 1/2대", "두부 1모", "간장 2.5큰술", "소고기 200g" 같은 문자열을 { name, amount, unit }으로 자동 분해
+    function parseIngredientText(rawLine, separateName, separateAmt) {
+      const parseNum = (str) => {
+        if (!str) return null;
+        const s = str.trim();
+        // 분수 처리 (예: 1/2, 1/3, 2/3, 1/4)
+        const frac = s.match(/^(\d+)\s*\/\s*(\d+)$/);
+        if (frac) return Math.round((Number(frac[1]) / Number(frac[2])) * 100) / 100;
+        const mixed = s.match(/^(\d+)\s*\+\s*(\d+)\/(\d+)$/);
+        if (mixed) return Math.round((Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3])) * 100) / 100;
+        const range = s.match(/^(\d+(?:\.\d+)?)\s*[~~-]\s*(\d+(?:\.\d+)?)$/);
+        if (range) return Number(range[1]);
+        const num = parseFloat(s);
+        return isNaN(num) ? null : num;
+      };
+
+      // 이름과 수량이 따로 들어온 경우 (만개의레시피 DOM 리스트)
+      if (separateName) {
+        const cleanName = separateName.replace(/\[.*?\]|\(.*?\)/g, '').trim();
+        const amtStr = (separateAmt || '').trim();
+        if (!amtStr || /약간|조금|적당량|취향껏/.test(amtStr)) {
+          return { name: cleanName, amount: 1, unit: amtStr || '적당량' };
+        }
+        const m = amtStr.match(/^(\d+\s*\/\s*\d+|\d+(?:\.\d+)?(?:[~~-]\d+(?:\.\d+)?)?)\s*(.*)$/);
+        if (m) {
+          const val = parseNum(m[1]) || 1;
+          const unit = (m[2] || '개').trim();
+          return { name: cleanName, amount: val, unit };
+        }
+        return { name: cleanName, amount: 1, unit: amtStr };
       }
 
-      throw lastErr || new Error('사용 가능한 AI 모델을 호출하지 못했습니다.');
+      // 한 줄 문자열로 들어온 경우 (JSON-LD recipeIngredient: "돼지고기 300g", "간장 2큰술")
+      const cleaned = String(rawLine || '').replace(/\[.*?\]/g, '').replace(/\s+/g, ' ').trim();
+      if (!cleaned) return { name: '재료', amount: 1, unit: '개' };
+
+      const match = cleaned.match(/^(.+?)\s+(\d+\s*\/\s*\d+|\d+(?:\.\d+)?(?:[~~-]\d+(?:\.\d+)?)?)\s*([가-힣a-zA-Z]+)?$/);
+      if (match) {
+        const name = match[1].replace(/\(.*?\)/g, '').trim();
+        const amount = parseNum(match[2]) || 1;
+        const unit = (match[3] || '개').trim();
+        return { name, amount, unit };
+      }
+
+      const parts = cleaned.split(' ');
+      if (parts.length >= 2) {
+        const last = parts.pop();
+        const numMatch = last.match(/^(\d+\/\d+|\d+(?:\.\d+)?)(.*)$/);
+        if (numMatch) {
+          return {
+            name: parts.join(' ').trim(),
+            amount: parseNum(numMatch[1]) || 1,
+            unit: (numMatch[2] || '개').trim()
+          };
+        }
+        return { name: parts.join(' ').trim(), amount: 1, unit: last };
+      }
+
+      return { name: cleaned, amount: 1, unit: '적당량' };
+    }
+
+    // 1단계: 만개의레시피에서 추천순(order=reco)으로 상위 레시피 목록 검색
+    async function search10000RecipeList(query) {
+      const urls = [
+        `https://www.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco`,
+        `https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco`
+      ];
+
+      const html = await fetchHtmlFast(urls[0]).catch(() => fetchHtmlFast(urls[1]));
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      const candidates = [];
+      const seenIds = new Set();
+
+      // /recipe/숫자 형태의 상세 링크 추출 (order=reco 정렬 상태이므로 첫 번째가 추천수 1위)
+      const links = Array.from(doc.querySelectorAll('a[href*="/recipe/"]'));
+      for (const a of links) {
+        const href = a.getAttribute('href') || '';
+        const idMatch = href.match(/\/recipe\/(\d{5,9})/);
+        if (!idMatch) continue;
+        const recipeId = idMatch[1];
+        if (seenIds.has(recipeId)) continue;
+
+        const card = a.closest('li, .common_sp_list_li, .thumbnail') || a.parentElement;
+        const titleEl = card?.querySelector('.common_sp_caption_tit, .caption_tit, .ellipsis_title2, h4, strong');
+        let title = (titleEl?.textContent || a.textContent || '').trim().replace(/\s+/g, ' ');
+        if (!title || title.length < 2) continue;
+
+        const imgEl = card?.querySelector('img[src*="recipe"], img');
+        const thumb = imgEl?.getAttribute('src') || '';
+
+        // 조회수/추천수 텍스트 추출
+        const buyerEl = card?.querySelector('.common_sp_caption_buyer, .caption_buyer, .caption_rv_name');
+        const metaText = (card?.textContent || '').replace(/\s+/g, ' ');
+        const viewMatch = metaText.match(/(조회수?\s*[\d,.]+만?)|(\([\d,]+\))/);
+
+        seenIds.add(recipeId);
+        candidates.push({
+          recipeId,
+          title,
+          thumb,
+          meta: viewMatch ? viewMatch[0] : (buyerEl?.textContent?.trim() || '추천 인기'),
+          url: `https://www.10000recipe.com/recipe/${recipeId}`
+        });
+
+        if (candidates.length >= 5) break;
+      }
+
+      if (candidates.length === 0) {
+        throw new Error(`'${query}'에 대한 만개의레시피 검색 결과가 없습니다.`);
+      }
+      return candidates;
+    }
+
+    // 2단계: 선택된 만개의레시피 상세 페이지(/recipe/ID)에서 재료·인분·조리순서 추출
+    async function fetch10000RecipeDetail(candidate, fallbackQuery) {
+      const detailUrl = `https://www.10000recipe.com/recipe/${candidate.recipeId}`;
+      const html = await fetchHtmlFast(detailUrl);
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      let name = candidate.title;
+      let servings = 2;
+      let time = '20분';
+      let thumb = candidate.thumb;
+      let ingredients = [];
+      let steps = [];
+
+      // 1순위: 페이지 내 표준 Schema.org JSON-LD (application/ld+json) 파싱
+      const ldScripts = Array.from(doc.querySelectorAll('script[type="application/ld+json"]'));
+      for (const s of ldScripts) {
+        try {
+          const parsed = JSON.parse(s.textContent);
+          const item = Array.isArray(parsed) ? parsed.find(x => x['@type'] === 'Recipe') : (parsed['@type'] === 'Recipe' ? parsed : null);
+          if (item) {
+            if (item.name) name = item.name.trim();
+            if (item.image) thumb = Array.isArray(item.image) ? item.image[0] : item.image;
+            if (item.recipeYield) {
+              const yMatch = String(item.recipeYield).match(/(\d+)/);
+              if (yMatch) servings = Number(yMatch[1]) || 2;
+            }
+            if (Array.isArray(item.recipeIngredient) && item.recipeIngredient.length > 0) {
+              ingredients = item.recipeIngredient.map(line => parseIngredientText(line));
+            }
+            if (Array.isArray(item.recipeInstructions) && item.recipeInstructions.length > 0) {
+              steps = item.recipeInstructions.map(inst => typeof inst === 'string' ? inst.trim() : (inst.text || '').trim()).filter(Boolean);
+            }
+            break;
+          }
+        } catch (e) {}
+      }
+
+      // 2순위: HTML DOM에서 직접 재료와 수량(ingre_list_name / ingre_list_ea) 정밀 추출 (JSON-LD보다 단위 분리가 더 정확할 때 보완)
+      const domIngItems = Array.from(doc.querySelectorAll('#divConfirmedMaterialArea li, .ready_ingre3 ul li'));
+      if (domIngItems.length > 0) {
+        const domParsed = [];
+        domIngItems.forEach(li => {
+          const nEl = li.querySelector('.ingre_list_name, a');
+          const aEl = li.querySelector('.ingre_list_ea, span.ingre_unit');
+          if (nEl) {
+            const iName = nEl.textContent.replace(/\s+/g, ' ').trim();
+            const iAmt = aEl ? aEl.textContent.replace(/\s+/g, ' ').trim() : '';
+            if (iName) domParsed.push(parseIngredientText('', iName, iAmt));
+          }
+        });
+        if (domParsed.length > 0) ingredients = domParsed;
+      }
+
+      // 조리 순서가 비어있다면 DOM에서 추출
+      if (steps.length === 0) {
+        const stepEls = Array.from(doc.querySelectorAll('[id^="stepdescr"], .view_step_cont .media-body'));
+        steps = stepEls.map(el => el.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean);
+      }
+
+      // 인분 및 소요시간 DOM 보완
+      const info1 = doc.querySelector('.view2_summary_info1')?.textContent || '';
+      const info2 = doc.querySelector('.view2_summary_info2')?.textContent || '';
+      const sMatch = info1.match(/(\d+)/);
+      if (sMatch) servings = Number(sMatch[1]) || servings;
+      if (info2.trim()) time = info2.trim();
+
+      const spicyWords = ['매운', '청양고추', '고추장', '고춧가루', '불닭', '마라', '매콤', '김치', '떡볶이', '제육'];
+      const fullHay = (name + ' ' + ingredients.map(i => i.name).join(' ')).toLowerCase();
+      const isSpicy = spicyWords.some(w => fullHay.includes(w)) && !name.includes('안 매운') && !name.includes('아이');
+
+      return normalizeRecipe({
+        id: '10k_' + candidate.recipeId,
+        name: name || fallbackQuery,
+        category: '한식',
+        servings,
+        time,
+        spicy: isSpicy,
+        thumb,
+        sourceUrl: detailUrl,
+        recommendCount: candidate.meta,
+        ingredients: ingredients.length > 0 ? ingredients : [{ name: fallbackQuery, amount: 1, unit: '인분' }],
+        steps: steps.length > 0 ? steps : ['상세 조리법은 상단 원본 링크를 참고해 주세요.']
+      }, 0);
     }
 
     async function searchOnlineRecipe(forceRefresh = false) {
@@ -1182,90 +1350,135 @@
       const box = document.getElementById('ai-result-box');
       const cacheKey = query.toLowerCase();
 
-      if (!forceRefresh && aiSearchCache[cacheKey]) {
-        const cachedRecipe = normalizeRecipe({ ...aiSearchCache[cacheKey], id: 'ai_' + Date.now() }, 0);
-        window.lastAiRecipe = cachedRecipe;
+      if (!forceRefresh && recipe10000Cache[cacheKey]) {
+        const cached = recipe10000Cache[cacheKey];
+        currentTopCandidates = cached.candidates || [];
+        window.lastAiRecipe = normalizeRecipe(cached.recipe, 0);
         box.classList.remove('hidden');
-        renderAiResultCard(cachedRecipe, '0.05초 (캐시 즉시 로드)', true);
-        return;
-      }
-
-      const apiKey = (localStorage.getItem('kitchen_gemini_key') || '').trim();
-      if (!apiKey) {
-        alert('초고속 AI 레시피 검색을 사용하려면 우측 상단 [⚙️ 설정]에서 무료 Gemini API 키를 입력해 주세요.');
-        openSettings();
+        render10000ResultCard(window.lastAiRecipe, currentTopCandidates, 0, '캐시 즉시 로드');
         return;
       }
 
       const btn = document.getElementById('ai-search-btn');
       btn.disabled = true;
-      btn.textContent = '생성중...';
+      btn.textContent = '검색중...';
       box.classList.remove('hidden');
 
       const startTime = performance.now();
       box.innerHTML = `
-        <div class="bg-white rounded-2xl p-5 border-2 border-indigo-400 shadow-sm space-y-2">
+        <div class="bg-white rounded-2xl p-5 border-2 border-emerald-500 shadow-sm space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-indigo-600 animate-pulse">⚡ AI가 레시피와 계량 수치를 생성 중입니다...</span>
-            <span class="text-[11px] text-slate-400">최대 8초</span>
+            <span class="text-xs font-extrabold text-emerald-700 animate-pulse">🏆 만개의레시피에서 '${query}' 추천순 1위 레시피 추출 중...</span>
+            <span class="text-[11px] text-slate-400">order=reco</span>
           </div>
-          <p id="ai-stream-preview" class="text-xs text-slate-500 font-mono truncate">서버 연결 중...</p>
+          <p class="text-xs text-slate-500">추천수가 가장 많은 레시피의 재료와 계량 단위를 분석하고 있습니다.</p>
         </div>
       `;
 
-      const prompt = `"${query}" 2인분 레시피를 순수 JSON으로만 출력해(설명생략, 조리순서 3~4단계 핵심만):
-{"name":"${query}","category":"한식","servings":2,"time":"15분","spicy":false,"ingredients":[{"name":"재료","amount":150,"unit":"g"}],"steps":["1단계","2단계"]}`;
-
       try {
-        const parsed = await streamFastGeminiRecipe(apiKey, prompt, (statusMsg) => {
-          const previewEl = document.getElementById('ai-stream-preview');
-          if (previewEl) previewEl.textContent = statusMsg;
-        });
+        const candidates = await search10000RecipeList(query);
+        currentTopCandidates = candidates;
+        const bestRecipe = await fetch10000RecipeDetail(candidates[0], query);
 
         const elapsed = ((performance.now() - startTime) / 1000).toFixed(1) + '초';
-        const clean = normalizeRecipe({ ...parsed, id: 'ai_' + Date.now() }, 0);
-        window.lastAiRecipe = clean;
+        window.lastAiRecipe = bestRecipe;
 
-        aiSearchCache[cacheKey] = clean;
-        localStorage.setItem('kitchen_ai_cache_v2', JSON.stringify(aiSearchCache));
+        recipe10000Cache[cacheKey] = { recipe: bestRecipe, candidates };
+        localStorage.setItem('kitchen_10000_cache_v1', JSON.stringify(recipe10000Cache));
 
-        renderAiResultCard(clean, elapsed, false);
+        render10000ResultCard(bestRecipe, candidates, 0, elapsed);
       } catch (e) {
-        box.innerHTML = `<div class="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-xs space-y-1">
-          <p class="font-bold">⚠️ 검색 중 오류가 발생했습니다: ${e.message}</p>
-          <p class="text-[11px] text-rose-600">우측 상단 [⚙️ 설정]에서 Gemini API 키를 확인해 주세요.</p>
-        </div>`;
+        box.innerHTML = `
+          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-xs space-y-2">
+            <p class="font-bold">⚠️ 레시피 추출 중 오류가 발생했습니다: ${e.message}</p>
+            <a href="https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco" target="_blank" class="inline-block bg-emerald-600 text-white font-bold px-3 py-2 rounded-xl">
+              🌐 만개의레시피 추천순 결과 페이지 바로 열기 ↗
+            </a>
+          </div>
+        `;
       } finally {
         btn.disabled = false;
-        btn.textContent = '⚡ 즉시생성';
+        btn.textContent = '🏆 인기검색';
       }
     }
 
-    function renderAiResultCard(clean, elapsedLabel, isFromCache) {
+    // 추천순 2~5위 다른 후보를 터치했을 때 해당 레시피로 즉시 전환
+    async function selectCandidateRank(rankIdx) {
+      const candidate = currentTopCandidates[rankIdx];
+      if (!candidate) return;
       const box = document.getElementById('ai-result-box');
-      box.innerHTML = `
-        <div class="bg-white rounded-2xl p-4 border-2 border-indigo-500 shadow-md space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-[11px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-extrabold">⚡ ${elapsedLabel} 완성</span>
-            <div class="flex items-center space-x-2">
-              ${isFromCache ? `<button onclick="searchOnlineRecipe(true)" class="text-[11px] text-indigo-600 underline font-bold">🔄 새로 생성</button>` : ''}
-              <span class="text-xs text-slate-400">기본 ${clean.servings}인분 · ${clean.time}</span>
-            </div>
+      box.innerHTML = `<div class="bg-white rounded-2xl p-5 border border-emerald-300 text-center text-xs text-emerald-700 font-bold animate-pulse">🏆 추천순 ${rankIdx + 1}위 레시피 계량 데이터를 불러오는 중...</div>`;
+      try {
+        const recipe = await fetch10000RecipeDetail(candidate, candidate.title);
+        window.lastAiRecipe = recipe;
+        render10000ResultCard(recipe, currentTopCandidates, rankIdx, `추천 ${rankIdx + 1}위`);
+      } catch (e) {
+        alert('레시피 상세 정보를 불러오지 못했습니다.');
+      }
+    }
+
+    function render10000ResultCard(clean, candidates, activeRankIdx, elapsedLabel) {
+      const box = document.getElementById('ai-result-box');
+
+      const rankButtonsHtml = (candidates && candidates.length > 1) ? `
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-slate-800">🏆 만개의레시피 추천순 TOP ${candidates.length} (터치하여 변경)</span>
+            <button onclick="searchOnlineRecipe(true)" class="text-[11px] text-emerald-600 font-bold underline">🔄 다시 검색</button>
           </div>
-          <h3 class="font-extrabold text-base text-slate-900">${clean.name}</h3>
-          <ul class="divide-y divide-slate-100 bg-slate-50 rounded-xl px-3 py-1 text-xs">
-            ${clean.ingredients.map(i => {
-              const owned = isIngredientInFridge(i.name);
-              return `<li class="py-1.5 flex justify-between">
-                <span>${i.name} ${owned ? '<strong class="text-[10px] text-cyan-700 bg-cyan-100 px-1.5 py-0.5 rounded ml-1">🧊보유중</strong>' : ''}</span>
-                <span class="font-bold text-indigo-600">${i.amount} ${i.unit}</span>
-              </li>`;
-            }).join('')}
-          </ul>
-          <ol class="list-decimal list-inside text-xs text-slate-600 space-y-1.5 leading-relaxed">
-            ${clean.steps.map(s => `<li>${s}</li>`).join('')}
-          </ol>
-          <button onclick="saveAiRecipeToBook()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-extrabold text-xs shadow active:scale-95 transition">📥 내 레시피북에 저장 및 오늘 저녁 식단 담기</button>
+          <div class="space-y-1.5">
+            ${candidates.map((c, idx) => `
+              <button onclick="selectCandidateRank(${idx})" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${idx === activeRankIdx ? 'bg-emerald-600 text-white font-extrabold shadow-sm' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'}">
+                <span class="truncate pr-2">${idx === 0 ? '🥇 1위' : (idx + 1) + '위'}: ${c.title}</span>
+                <span class="text-[10px] shrink-0 ${idx === activeRankIdx ? 'text-emerald-100' : 'text-slate-400'}">${c.meta || ''}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      ` : '';
+
+      box.innerHTML = `
+        ${rankButtonsHtml}
+        <div class="bg-white rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-md">
+          ${clean.thumb ? `
+            <div class="w-full h-44 bg-slate-900 relative">
+              <img src="https://wsrv.nl/?url=${encodeURIComponent(clean.thumb)}&w=600&output=webp" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.parentElement.style.display='none'">
+              <span class="absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow">
+                🏆 만개의레시피 추천 ${activeRankIdx + 1}위 (${elapsedLabel})
+              </span>
+            </div>
+          ` : ''}
+          <div class="p-4 space-y-3">
+            <div class="flex justify-between items-start gap-2">
+              <h3 class="font-extrabold text-base text-slate-900 leading-snug">${clean.name}</h3>
+              <a href="${clean.sourceUrl || 'https://m.10000recipe.com'}" target="_blank" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-bold shrink-0">원본보기 ↗</a>
+            </div>
+            <p class="text-xs text-slate-500">⏱️ ${clean.time} · 기본 ${clean.servings}인분 기준 계량 (저장 후 인분 조절 가능)</p>
+
+            <div>
+              <h4 class="text-xs font-extrabold text-slate-800 mb-1.5">추출된 계량 재료 (${clean.ingredients.length}가지)</h4>
+              <ul class="divide-y divide-slate-100 bg-slate-50 rounded-xl px-3 py-1 text-xs max-h-60 overflow-y-auto">
+                ${clean.ingredients.map(i => {
+                  const owned = isIngredientInFridge(i.name);
+                  return `<li class="py-1.5 flex justify-between items-center">
+                    <span>${i.name} ${owned ? '<strong class="text-[10px] text-cyan-700 bg-cyan-100 px-1.5 py-0.5 rounded ml-1">🧊보유중</strong>' : ''}</span>
+                    <span class="font-extrabold text-emerald-700">${i.amount} ${i.unit}</span>
+                  </li>`;
+                }).join('')}
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="text-xs font-extrabold text-slate-800 mb-1.5">조리 순서</h4>
+              <ol class="list-decimal list-inside text-xs text-slate-600 space-y-1.5 leading-relaxed bg-slate-50 rounded-xl p-3 max-h-64 overflow-y-auto">
+                ${clean.steps.map(s => `<li>${s}</li>`).join('')}
+              </ol>
+            </div>
+
+            <button onclick="saveAiRecipeToBook()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl font-extrabold text-xs shadow active:scale-95 transition">
+              📥 내 레시피북에 저장 및 오늘(${getTodayKoreanDay()}요일) 저녁 식단 담기
+            </button>
+          </div>
         </div>
       `;
     }
@@ -1274,7 +1487,7 @@
       if (!window.lastAiRecipe) return;
       recipes.unshift(window.lastAiRecipe);
       addMealPlan(window.lastAiRecipe.id, window.lastAiRecipe.servings, '저녁', getTodayKoreanDay());
-      alert(`'${window.lastAiRecipe.name}' 레시피가 저장되고 오늘(${getTodayKoreanDay()}요일) 저녁 식단에 담겼습니다!`);
+      alert(`'${window.lastAiRecipe.name}' 레시피가 내 레시피북에 저장되고 오늘(${getTodayKoreanDay()}요일) 저녁 식단에 담겼습니다!`);
       switchTab('recipes');
     }
 
@@ -1284,11 +1497,9 @@
     function saveSettings() {
       const room = document.getElementById('input-room-id').value.trim() || 'home-kitchen-sync';
       const config = document.getElementById('input-firebase-config').value.trim();
-      const geminiKey = document.getElementById('input-gemini-key').value.trim();
 
       localStorage.setItem('kitchen_room_id', room);
       localStorage.setItem('kitchen_firebase_config', config);
-      localStorage.setItem('kitchen_gemini_key', geminiKey);
       roomId = room;
       closeSettings();
       location.reload();
