@@ -1220,18 +1220,64 @@
                   } catch (e) {}
                 }
               }
-            }
+    async function streamFastGeminiRecipe(apiKey, prompt, onPartialText) {
+      const savedFastModel = localStorage.getItem('kitchen_fast_model') || 'models/gemini-3.8-flash';
+      const candidates = [...new Set([
+        'models/gemini-3.8-flash',
+        savedFastModel,
+        'models/gemini-3.0-flash',
+        'models/gemini-2.5-flash'
+      ])];
 
-            const jsonMatch = accumulated.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error('JSON 응답 형식 오류');
-            return JSON.parse(jsonMatch[0]);
-          } catch (err) {
-            lastErr = err;
+      let lastErr = null;
+
+      for (const modelName of candidates) {
+        // 10초 타임아웃 설정으로 무한 로딩(Pending) 현상 원천 차단
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.2,
+                maxOutputTokens: 700
+              }
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            lastErr = new Error(errJson?.error?.message || `HTTP ${res.status}`);
+            continue;
           }
+
+          const data = await res.json();
+          const parts = data?.candidates?.[0]?.content?.parts || [];
+          const fullText = parts.map(p => p.text || '').join('\n');
+          
+          if (onPartialText) onPartialText(fullText);
+
+          const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('JSON 응답 형식 오류');
+          
+          localStorage.setItem('kitchen_fast_model', modelName);
+          return JSON.parse(jsonMatch[0]);
+        } catch (err) {
+          clearTimeout(timeoutId);
+          lastErr = err;
         }
       }
-      throw lastErr || new Error('AI 응답 호출 실패');
+      throw lastErr || new Error('모든 AI 모델 호출 실패');
     }
+
 
     async function searchOnlineRecipe(forceRefresh = false) {
       const query = document.getElementById('ai-query').value.trim();
