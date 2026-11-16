@@ -1148,8 +1148,8 @@
       const savedFastModel = localStorage.getItem('kitchen_fast_model') || 'models/gemini-3.0-flash';
       const candidates = [...new Set([
         savedFastModel,
-        'models/gemini-3.0-flash',
-        'models/gemini-2.0-flash'
+        'models/gemini-3.8-flash',
+        'models/gemini-3.0-flash'
       ])];
 
       // 추론(Thinking) 예산을 0으로 꺼서 첫 토큰 응답 지연(TTFT)을 0.3초대로 단축
