@@ -42,7 +42,7 @@
         <div>
           <div class="flex items-center space-x-1.5">
             <h1 class="font-extrabold text-base text-slate-900 leading-tight">우리집 식단 & 냉장고</h1>
-            <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-extrabold">Turbo</span>
+            <span class="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-extrabold">Turbo v2</span>
           </div>
           <p id="room-label" class="text-[11px] text-slate-400">로컬 저장소 사용 중</p>
         </div>
@@ -98,19 +98,16 @@
           <span id="fridge-count-label" class="text-xs font-extrabold text-cyan-600 bg-cyan-50 px-2.5 py-1 rounded-full">0개</span>
         </div>
 
-        <!-- 재료 입력창 -->
         <div class="flex space-x-2">
           <input type="text" id="fridge-input" onkeydown="if(event.key==='Enter') addFridgeItemFromInput()" placeholder="보유 재료 입력 (예: 두부, 삼겹살, 계란)" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none">
           <button onclick="addFridgeItemFromInput()" class="bg-cyan-600 text-white px-4 py-2 rounded-xl font-bold text-xs shrink-0 shadow active:scale-95">추가</button>
         </div>
 
-        <!-- 자주 쓰는 재료 원터치 추가 -->
         <div>
           <p class="text-[11px] font-bold text-slate-400 mb-1.5">자주 쓰는 재료 터치하여 넣기/빼기</p>
           <div id="quick-fridge-presets" class="flex flex-wrap gap-1.5"></div>
         </div>
 
-        <!-- 현재 보유 중인 재료 칩 목록 -->
         <div class="pt-2 border-t border-slate-100">
           <div class="flex justify-between items-center mb-2">
             <span class="text-xs font-extrabold text-slate-700">현재 냉장고 속 재료 (터치하여 삭제)</span>
@@ -122,7 +119,6 @@
         </div>
       </div>
 
-      <!-- 내 레시피북 중 냉장고 재료로 만들 수 있는 요리 추천 -->
       <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-2.5">
         <h3 class="font-extrabold text-slate-900 text-sm">🍳 냉장고 재료가 포함된 내 레시피북 메뉴</h3>
         <div id="fridge-matched-recipes" class="space-y-2"></div>
@@ -134,27 +130,25 @@
       <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-extrabold text-slate-900 text-base">⚡ 초고속 AI 레시피 생성기</h2>
-          <span id="ai-speed-badge" class="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">⚡ Turbo 스트리밍</span>
+          <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">8초 타임아웃 보호</span>
         </div>
         <p class="text-xs text-slate-500 leading-relaxed">
-          생각 대기 시간(Thinking Delay)을 제거하고 실시간 스트리밍과 캐시를 적용해 <strong>1~2초 내외로 즉시 계량 레시피</strong>를 뽑아줍니다.
+          무한 로딩을 원천 차단하고 <strong>직행 JSON 호출과 로컬 캐시</strong>를 통해 1~2초 내로 정확한 계량 레시피를 생성합니다.
         </p>
         <div class="flex space-x-2">
-          <input type="text" id="ai-query" onkeydown="if(event.key==='Enter') searchOnlineRecipe(false)" placeholder="요리명 또는 재료 조합 (예: 시금치 프리타타)" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input type="text" id="ai-query" onkeydown="if(event.key==='Enter') searchOnlineRecipe(false)" placeholder="요리명 또는 재료 조합 (예: 두부조림, 시금치 프리타타)" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
           <button onclick="searchOnlineRecipe(false)" id="ai-search-btn" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-extrabold text-xs shrink-0 shadow active:scale-95 transition">⚡ 즉시생성</button>
         </div>
 
-        <!-- 빠른 검색어 & 냉장고 재료 연동 버튼 -->
         <div class="flex flex-wrap gap-1.5 pt-1">
           <button onclick="aiCookWithFridge()" class="text-[11px] bg-cyan-50 border border-cyan-200 text-cyan-800 font-bold px-2.5 py-1 rounded-full">🧊 내 냉장고 재료로 추천받기</button>
+          <button onclick="quickAiSearch('밥도둑 두부조림')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#두부조림</button>
           <button onclick="quickAiSearch('시금치 프리타타')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#시금치프리타타</button>
           <button onclick="quickAiSearch('안 매운 아이용 마파두부')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#아이용마파두부</button>
           <button onclick="quickAiSearch('대패삼겹 숙주볶음')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#대패삼겹숙주볶음</button>
-          <button onclick="quickAiSearch('명란 아보카도 덮밥')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">#명란아보카도덮밥</button>
         </div>
       </div>
 
-      <!-- AI 실시간 스트리밍 프리뷰 & 최종 결과 영역 -->
       <div id="ai-result-box" class="hidden"></div>
     </section>
 
@@ -169,15 +163,12 @@
           <button onclick="clearMealPlan()" class="text-xs text-rose-500 font-bold px-2.5 py-1.5 hover:bg-rose-50 rounded-lg">전체 비우기</button>
         </div>
 
-        <!-- 요일 필터 탭 (전체 / 월~일) -->
         <div id="day-filter-tabs" class="flex space-x-1.5 overflow-x-auto pb-1 scrollbar-none"></div>
-
-        <!-- 선택된 식단 카드 리스트 -->
         <div id="selected-meals-list" class="space-y-2.5 pt-1"></div>
       </div>
     </section>
 
-    <!-- 탭 5: 장보기 합산 체크리스트 (냉장고 재료 자동 차감 표시) -->
+    <!-- 탭 5: 장보기 합산 체크리스트 -->
     <section id="tab-shopping" class="space-y-4 hidden">
       <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
         <div class="flex justify-between items-center">
@@ -309,6 +300,9 @@
   <script>
     const DAYS_OF_WEEK = ['월', '화', '수', '목', '금', '토', '일'];
     const FRIDGE_PRESETS = ['계란', '두부', '양파', '대파', '다진마늘', '애호박', '감자', '양배추', '김치', '삼겹살', '차돌박이', '소고기', '닭고기', '우유', '슬라이스치즈', '진간장', '고추장', '된장', '굴소스'];
+
+    // 이전 버전에서 잘못 캐싱된 모델명이 있으면 시작 시 자동 정리
+    localStorage.removeItem('kitchen_fast_model');
 
     const defaultRecipes = [
       {
@@ -457,13 +451,11 @@
       return allBroken ? defaultRecipes : normalized;
     }
 
-    // 오늘 요일 자동 계산 ('월'~'일')
     function getTodayKoreanDay() {
       const map = ['일', '월', '화', '수', '목', '금', '토'];
       return map[new Date().getDay()];
     }
 
-    // 전역 상태 변수
     let recipes = normalizeRecipeList(JSON.parse(localStorage.getItem('kitchen_recipes_v2') || 'null'));
     let selectedMeals = JSON.parse(localStorage.getItem('kitchen_meals_v2') || '[]');
     let shoppingChecked = JSON.parse(localStorage.getItem('kitchen_checked_v2') || '{}');
@@ -481,7 +473,6 @@
     document.getElementById('input-firebase-config').value = localStorage.getItem('kitchen_firebase_config') || '';
     document.getElementById('input-gemini-key').value = localStorage.getItem('kitchen_gemini_key') || '';
 
-    // 재료가 냉장고에 있는지 판별 (부분 일치 허용: '소고기' 보유 시 '소고기 불고기용' 매칭)
     function isIngredientInFridge(ingName) {
       const clean = String(ingName || '').trim().toLowerCase();
       if (!clean) return false;
@@ -491,7 +482,6 @@
       });
     }
 
-    // 레시피의 냉장고 재료 매칭 개수 계산
     function getFridgeMatchCount(recipe) {
       if (!recipe || !Array.isArray(recipe.ingredients)) return 0;
       return recipe.ingredients.filter(i => isIngredientInFridge(i.name)).length;
@@ -689,18 +679,15 @@
       }).join('');
     }
 
-    // 🧊 냉장고 재고 관리 탭 렌더링 및 동작
     function renderFridgeTab() {
       document.getElementById('fridge-count-label').textContent = `${fridgeItems.length}개 보유`;
 
-      // 프리셋 버튼 렌더링
       const presetBox = document.getElementById('quick-fridge-presets');
       presetBox.innerHTML = FRIDGE_PRESETS.map(item => {
         const has = fridgeItems.includes(item);
         return `<button onclick="toggleFridgeItem('${item}')" class="text-xs px-2.5 py-1 rounded-full font-bold transition ${has ? 'bg-cyan-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${has ? '✓ ' : '+ '}${item}</button>`;
       }).join('');
 
-      // 현재 보유 재료 칩
       const listBox = document.getElementById('fridge-items-list');
       if (fridgeItems.length === 0) {
         listBox.innerHTML = `<span class="text-xs text-slate-400">등록된 냉장고 재료가 없습니다. 위에서 재료를 선택해 보세요.</span>`;
@@ -713,7 +700,6 @@
         `).join('');
       }
 
-      // 냉장고 재료와 매칭되는 레시피북 메뉴 표시
       const matchedBox = document.getElementById('fridge-matched-recipes');
       const matched = recipes
         .map(normalizeRecipe)
@@ -781,7 +767,6 @@
       openRecipeModal(chosen.id);
     }
 
-    // 레시피 상세 모달 (요일 지정 + 인분 계량 + 보유 재료 표시)
     function openRecipeModal(id) {
       const rawRecipe = recipes.find(item => String(item.id) === String(id));
       if (!rawRecipe) return;
@@ -843,7 +828,6 @@
             </ol>
           </div>
 
-          <!-- 식단 배정 요일 선택 -->
           <div class="pt-1">
             <span class="text-xs font-extrabold text-slate-700 block mb-1.5">📅 식단에 담을 요일 선택</span>
             <div class="grid grid-cols-7 gap-1">
@@ -885,7 +869,6 @@
       syncToCloud();
     }
 
-    // 📅 주간 요일별 식단표 관리
     function addMealPlan(id, targetServings, slot, day) {
       const raw = recipes.find(item => String(item.id) === String(id));
       if (!raw) return;
@@ -936,7 +919,6 @@
     }
 
     function renderMealPlan() {
-      // 요일 탭 렌더링
       const dayTabs = document.getElementById('day-filter-tabs');
       const allDays = ['전체', ...DAYS_OF_WEEK];
       dayTabs.innerHTML = allDays.map(d => {
@@ -951,7 +933,6 @@
         return;
       }
 
-      // 요일 순 정렬
       const indexedMeals = selectedMeals.map((m, idx) => ({ ...m, origIdx: idx }));
       const filteredMeals = currentDayFilter === '전체'
         ? indexedMeals
@@ -992,7 +973,6 @@
       }).join('');
     }
 
-    // 🛒 장보기 리스트 자동 합산 (냉장고 보유 재료 자동 체크)
     function getAggregatedShoppingList() {
       const map = {};
       selectedMeals.forEach(meal => {
@@ -1026,7 +1006,6 @@
 
       const recipeItemsHtml = items.map(item => {
         const ownedInFridge = isIngredientInFridge(item.name);
-        // 사용자가 수동으로 체크 해제하지 않은 한, 냉장고에 있으면 자동 체크 처리
         const isChecked = shoppingChecked[item.key] !== undefined ? shoppingChecked[item.key] : ownedInFridge;
         const amt = Math.round(item.amount * 10) / 10;
         return `
@@ -1137,101 +1116,63 @@
       syncToCloud();
     }
 
-    // ⚡ 초고속 AI 레시피 생성 엔진 (모델 조회 제거 + Thinking 비활성화 + SSE 실시간 스트리밍 + 캐시)
+    // ⚡ 무한 로딩 방지(8초 AbortController) + 직행 고속 호출 엔진
     function quickAiSearch(q) {
       document.getElementById('ai-query').value = q;
       searchOnlineRecipe(false);
     }
 
     async function streamFastGeminiRecipe(apiKey, prompt, onPartialText) {
-      // 이전에 성공한 모델을 최우선으로 바로 호출 (불필요한 /models 사전 조회 왕복 1.5초 제거)
-      const savedFastModel = localStorage.getItem('kitchen_fast_model') || 'models/gemini-3.0-flash';
-      const candidates = [...new Set([
-        savedFastModel,
-        'models/gemini-3.8-flash',
-        'models/gemini-3.0-falsh',
-        'models/gemini-2.0-flash'
-      ])];
-
-      // 추론(Thinking) 예산을 0으로 꺼서 첫 토큰 응답 지연(TTFT)을 0.3초대로 단축
-      const buildPayload = (includeThinkingConfig) => {
-        const cfg = {
-          responseMimeType: "application/json",
-          temperature: 0.2,
-          maxOutputTokens: 700
-        };
-        if (includeThinkingConfig) {
-          cfg.thinkingConfig = { thinkingBudget: 0 };
-        }
-        return {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: cfg
-        };
-      };
+      const modelsToTry = [
+        'models/gemini-3.0-flash',
+        'models/gemini-2.5-flash',
+        'models/gemini-1.5-flash'
+      ];
 
       let lastErr = null;
 
-      for (const modelName of candidates) {
-        for (const useThinkingZero of [true, false]) {
-          try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(buildPayload(useThinkingZero))
-            });
+      for (const modelName of modelsToTry) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-            if (!res.ok) {
-              const errJson = await res.json().catch(() => ({}));
-              const errMsg = errJson?.error?.message || `HTTP ${res.status}`;
-              // thinkingConfig 미지원 모델이면 일반 설정으로 즉시 재시도
-              if (useThinkingZero && /thinking/i.test(errMsg)) continue;
-              lastErr = new Error(errMsg);
-              break;
-            }
+        try {
+          if (onPartialText) onPartialText(`${modelName.replace('models/', '')} 모델로 빠르게 생성 중...`);
 
-            // 성공한 모델을 로컬에 기억해 다음 검색부터 1번에 바로 적중
-            localStorage.setItem('kitchen_fast_model', modelName);
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
-            let accumulated = '';
-
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const jsonStr = line.slice(6).trim();
-                  if (!jsonStr || jsonStr === '[DONE]') continue;
-                  try {
-                    const chunk = JSON.parse(jsonStr);
-                    const parts = chunk?.candidates?.[0]?.content?.parts || [];
-                    for (const p of parts) {
-                      if (p.text) {
-                        accumulated += p.text;
-                        if (onPartialText) onPartialText(accumulated);
-                      }
-                    }
-                  } catch (e) {}
-                }
+          const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.2
               }
-            }
+            })
+          });
 
-            const jsonMatch = accumulated.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error('JSON 응답 형식 오류');
-            return JSON.parse(jsonMatch[0]);
-          } catch (err) {
-            lastErr = err;
+          clearTimeout(timeoutId);
+          const data = await res.json();
+
+          if (!res.ok || data.error) {
+            lastErr = new Error(data?.error?.message || `HTTP ${res.status}`);
+            continue;
           }
+
+          const parts = data?.candidates?.[0]?.content?.parts || [];
+          const fullText = parts.map(p => p.text || '').join('\n');
+          const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('JSON 응답 형식 오류');
+
+          return JSON.parse(jsonMatch[0]);
+        } catch (err) {
+          clearTimeout(timeoutId);
+          lastErr = err.name === 'AbortError' ? new Error('응답 시간 초과 (8초)') : err;
         }
       }
-      throw lastErr || new Error('AI 응답 호출 실패');
+
+      throw lastErr || new Error('사용 가능한 AI 모델을 호출하지 못했습니다.');
     }
 
     async function searchOnlineRecipe(forceRefresh = false) {
@@ -1241,7 +1182,6 @@
       const box = document.getElementById('ai-result-box');
       const cacheKey = query.toLowerCase();
 
-      // 1. 캐시에 이미 있는 요리라면 0.05초 만에 즉시 표시
       if (!forceRefresh && aiSearchCache[cacheKey]) {
         const cachedRecipe = normalizeRecipe({ ...aiSearchCache[cacheKey], id: 'ai_' + Date.now() }, 0);
         window.lastAiRecipe = cachedRecipe;
@@ -1266,34 +1206,26 @@
       box.innerHTML = `
         <div class="bg-white rounded-2xl p-5 border-2 border-indigo-400 shadow-sm space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-indigo-600 animate-pulse">⚡ AI가 초고속 스트리밍으로 레시피를 작성 중...</span>
-            <span class="text-[11px] text-slate-400">Thinking OFF</span>
+            <span class="text-xs font-extrabold text-indigo-600 animate-pulse">⚡ AI가 레시피와 계량 수치를 생성 중입니다...</span>
+            <span class="text-[11px] text-slate-400">최대 8초</span>
           </div>
-          <p id="ai-stream-preview" class="text-xs text-slate-500 font-mono truncate">연결 중...</p>
+          <p id="ai-stream-preview" class="text-xs text-slate-500 font-mono truncate">서버 연결 중...</p>
         </div>
       `;
 
-      // 프롬프트를 간결하게 최적화하여 생성 토큰 수와 시간을 최소화
       const prompt = `"${query}" 2인분 레시피를 순수 JSON으로만 출력해(설명생략, 조리순서 3~4단계 핵심만):
-{"name":"요리명","category":"한식","servings":2,"time":"15분","spicy":false,"ingredients":[{"name":"재료","amount":150,"unit":"g"}],"steps":["1단계","2단계"]}`;
+{"name":"${query}","category":"한식","servings":2,"time":"15분","spicy":false,"ingredients":[{"name":"재료","amount":150,"unit":"g"}],"steps":["1단계","2단계"]}`;
 
       try {
-        const parsed = await streamFastGeminiRecipe(apiKey, prompt, (partial) => {
+        const parsed = await streamFastGeminiRecipe(apiKey, prompt, (statusMsg) => {
           const previewEl = document.getElementById('ai-stream-preview');
-          if (previewEl) {
-            const nameMatch = partial.match(/"name"\s*:\s*"([^"]+)"/);
-            const ingMatches = [...partial.matchAll(/"name"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
-            previewEl.textContent = nameMatch
-              ? `🍳 ${nameMatch[1]} · 재료 추출 중 (${Math.max(0, ingMatches.length - 1)}개)...`
-              : `수신 중 (${partial.length}자)...`;
-          }
+          if (previewEl) previewEl.textContent = statusMsg;
         });
 
         const elapsed = ((performance.now() - startTime) / 1000).toFixed(1) + '초';
         const clean = normalizeRecipe({ ...parsed, id: 'ai_' + Date.now() }, 0);
         window.lastAiRecipe = clean;
 
-        // 로컬 캐시에 저장해 다음번엔 즉시 로드
         aiSearchCache[cacheKey] = clean;
         localStorage.setItem('kitchen_ai_cache_v2', JSON.stringify(aiSearchCache));
 
