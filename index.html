@@ -43,7 +43,7 @@
         <div>
           <div class="flex items-center space-x-1.5">
             <h1 class="font-extrabold text-base text-slate-900 leading-tight">우리집 식단 & 냉장고</h1>
-            <span class="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-extrabold">만개의레시피 v2</span>
+            <span class="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-extrabold">만개의레시피 v3</span>
           </div>
           <p id="room-label" class="text-[11px] text-slate-400">로컬 저장소 사용 중</p>
         </div>
@@ -126,15 +126,15 @@
       </div>
     </section>
 
-    <!-- 탭 3: 만개의레시피 추천순 1위 실시간 검색 (API 불필요) -->
+    <!-- 탭 3: 만개의레시피 추천순 1위 검색 + 원터치 복붙 계량 변환기 -->
     <section id="tab-ai" class="space-y-4 hidden">
       <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-extrabold text-slate-900 text-base">🏆 만개의레시피 추천순 검색</h2>
-          <span class="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-extrabold">모바일 고속 추출</span>
+          <span class="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-extrabold">API 키 불필요 · 무료</span>
         </div>
         <p class="text-xs text-slate-500 leading-relaxed">
-          API 키 소모 없이 <strong>m.10000recipe.com에서 추천수가 가장 많은 레시피</strong>를 찾아 인분 계산기가 작동하는 계량 데이터로 즉시 변환합니다.
+          <strong>m.10000recipe.com</strong>에서 추천수가 가장 많은 레시피를 찾아 인분 계산기 데이터로 자동 변환합니다.
         </p>
         <div class="flex space-x-2">
           <input type="text" id="ai-query" onkeydown="if(event.key==='Enter') searchOnlineRecipe(false)" placeholder="요리명 또는 재료 입력 (예: 두부조림, 제육볶음)" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
@@ -151,8 +151,23 @@
         </div>
       </div>
 
-      <!-- 검색된 추천순 TOP 5 선택 바 & 상세 결과 카드 -->
+      <!-- 검색 결과 및 TOP 5 표시 영역 -->
       <div id="ai-result-box" class="hidden space-y-3"></div>
+
+      <!-- 만개의레시피 직접 복사·붙여넣기 자동 계량 변환기 (사이트 차단 시 100% 해결) -->
+      <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h3 class="font-extrabold text-slate-800 text-xs">📋 만개의레시피 본문 붙여넣기 자동 계량 변환기</h3>
+          <a id="direct-10000-link" href="https://m.10000recipe.com/recipe/list.html?order=reco" target="_blank" class="text-[11px] text-emerald-600 font-extrabold underline">사이트 열기 ↗</a>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          만개의레시피에서 마음에 드는 레시피 화면을 길게 눌러 <strong>전체 선택 → 복사</strong>한 뒤 아래에 붙여넣으면 재료 수치와 조리법을 자동으로 뽑아줍니다.
+        </p>
+        <textarea id="paste-recipe-box" rows="3" placeholder="여기에 만개의레시피 페이지에서 복사한 내용을 붙여넣으세요..." class="w-full border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        <button onclick="parsePasted10000Text()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl font-extrabold text-xs shadow active:scale-95 transition">
+          ✨ 붙여넣은 텍스트에서 계량 레시피 자동 추출하기
+        </button>
+      </div>
     </section>
 
     <!-- 탭 4: 요일별(월~일) 주간 식단 캘린더 -->
@@ -459,7 +474,7 @@
     let shoppingChecked = JSON.parse(localStorage.getItem('kitchen_checked_v2') || '{}');
     let customShoppingItems = JSON.parse(localStorage.getItem('kitchen_custom_items_v2') || '[]');
     let fridgeItems = JSON.parse(localStorage.getItem('kitchen_fridge_v2') || '["계란", "양파", "대파", "다진마늘"]');
-    let recipe10000Cache = JSON.parse(localStorage.getItem('kitchen_10000_cache_v2') || '{}');
+    let recipe10000Cache = JSON.parse(localStorage.getItem('kitchen_10000_cache_v3') || '{}');
 
     let currentFilter = '전체';
     let currentDayFilter = '전체';
@@ -1107,62 +1122,16 @@
     }
 
     // =========================================================================
-    // 🏆 모바일 만개의레시피(m.10000recipe.com) 추천순(order=reco) 고속 크롤러
+    // 🏆 만개의레시피 헤드리스 리더(r.jina.ai) + 복사·붙여넣기 자동 계량 변환기
     // =========================================================================
 
     function quickAiSearch(q) {
       document.getElementById('ai-query').value = q;
-      searchOnlineRecipe(false);
-    }
-
-    // 4중 우회 프록시 병렬 경쟁 호출 (JSON 래핑 프록시 + 타임아웃 12초)
-    async function fetchHtmlFast(targetUrl) {
-      const encoded = encodeURIComponent(targetUrl);
-      const runners = [
-        async (sig) => {
-          const r = await fetch(`https://api.allorigins.win/get?url=${encoded}`, { signal: sig });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          const j = await r.json();
-          return j.contents || '';
-        },
-        async (sig) => {
-          const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encoded}`, { signal: sig });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return await r.text();
-        },
-        async (sig) => {
-          const r = await fetch(`https://corsproxy.io/?${encoded}`, { signal: sig });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return await r.text();
-        },
-        async (sig) => {
-          const r = await fetch(`https://api.allorigins.win/raw?url=${encoded}`, { signal: sig });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return await r.text();
-        }
-      ];
-
-      const runWithTimeout = async (fn) => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 12000);
-        try {
-          const text = await fn(controller.signal);
-          clearTimeout(timer);
-          if (!text || text.length < 300 || text.includes('Just a moment...')) {
-            throw new Error('Invalid or blocked response');
-          }
-          return text;
-        } catch (e) {
-          clearTimeout(timer);
-          throw e;
-        }
-      };
-
-      try {
-        return await Promise.any(runners.map(runWithTimeout));
-      } catch (aggErr) {
-        throw new Error('만개의레시피 서버 응답 지연 또는 프록시 일시 차단');
+      const directLink = document.getElementById('direct-10000-link');
+      if (directLink) {
+        directLink.href = `https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(q)}&order=reco`;
       }
+      searchOnlineRecipe(false);
     }
 
     function parseIngredientText(rawLine, separateName, separateAmt) {
@@ -1194,7 +1163,7 @@
         return { name: cleanName, amount: 1, unit: amtStr };
       }
 
-      const cleaned = String(rawLine || '').replace(/\[.*?\]/g, '').replace(/\s+/g, ' ').trim();
+      const cleaned = String(rawLine || '').replace(/^[-*•]\s*/, '').replace(/\[.*?\]/g, '').replace(/\s+/g, ' ').trim();
       if (!cleaned) return { name: '재료', amount: 1, unit: '개' };
 
       const match = cleaned.match(/^(.+?)\s+(\d+\s*\/\s*\d+|\d+(?:\.\d+)?(?:[~~-]\d+(?:\.\d+)?)?)\s*([가-힣a-zA-Z]+)?$/);
@@ -1222,140 +1191,184 @@
       return { name: cleaned, amount: 1, unit: '적당량' };
     }
 
-    // 1단계: 가벼운 모바일 페이지(m.10000recipe.com)에서 추천순(order=reco) 목록 추출
+    // Jina Reader(r.jina.ai)를 통한 헤드리스 브라우저 본문 추출
+    async function fetchViaJinaReader(targetUrl) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 14000);
+      try {
+        const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
+          headers: { 'Accept': 'text/plain' },
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const text = await res.text();
+        if (!text || text.length < 200 || text.includes('Access Denied') || text.includes('403 Forbidden')) {
+          throw new Error('사이트 접근 제한');
+        }
+        return text;
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
+      }
+    }
+
+    // 1단계: Jina Reader로 추천순 검색 결과 마크다운에서 상위 레시피 5개 추출
     async function search10000RecipeList(query) {
-      const mobileSearchUrl = `https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco`;
-      const html = await fetchHtmlFast(mobileSearchUrl);
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const searchUrl = `https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco`;
+      const md = await fetchViaJinaReader(searchUrl);
 
       const candidates = [];
       const seenIds = new Set();
 
-      const links = Array.from(doc.querySelectorAll('a[href*="/recipe/"]'));
-      for (const a of links) {
-        const href = a.getAttribute('href') || '';
-        const idMatch = href.match(/\/recipe\/(\d{5,9})/);
-        if (!idMatch) continue;
-        const recipeId = idMatch[1];
+      // 마크다운 링크 패턴: [제목](https://m.10000recipe.com/recipe/1234567) 또는 /recipe/1234567
+      const linkRegex = /\[([^\]]+)\]\((https?:\/\/(?:m\.|www\.)?10000recipe\.com\/recipe\/(\d{5,9})[^)]*)\)/g;
+      let m;
+      while ((m = linkRegex.exec(md)) !== null) {
+        const rawTitle = m[1].replace(/!\[.*?\]\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
+        const recipeId = m[3];
         if (seenIds.has(recipeId)) continue;
-
-        const card = a.closest('li, .media, .common_sp_list_li, .thumbnail, div[class*="list"]') || a.parentElement;
-        const titleEl = card?.querySelector('.common_sp_caption_tit, .media-heading, .caption_tit, .ellipsis_title2, h4, h3, strong');
-        const imgEl = card?.querySelector('img');
-
-        let title = (titleEl?.textContent || imgEl?.getAttribute('alt') || a.textContent || '').trim().replace(/\s+/g, ' ');
-        // 작성자명/조회수 텍스트가 섞여 들어간 경우 정리
-        title = title.replace(/조회수?\s*[\d,.]+만?.*$/, '').trim();
-        if (!title || title.length < 2) continue;
-
-        const thumb = imgEl?.getAttribute('data-src') || imgEl?.getAttribute('src') || '';
-        const metaText = (card?.textContent || '').replace(/\s+/g, ' ');
-        const viewMatch = metaText.match(/(조회수?\s*[\d,.]+만?)|(\([\d,]+\))/);
+        if (!rawTitle || rawTitle.length < 2 || rawTitle.startsWith('http')) continue;
 
         seenIds.add(recipeId);
         candidates.push({
           recipeId,
-          title,
-          thumb,
-          meta: viewMatch ? viewMatch[0] : '추천순 인기',
+          title: rawTitle.replace(/조회수?\s*[\d,.]+만?.*$/, '').trim(),
+          thumb: '',
+          meta: '추천순 인기',
           url: `https://m.10000recipe.com/recipe/${recipeId}`
         });
-
         if (candidates.length >= 5) break;
       }
 
       if (candidates.length === 0) {
-        throw new Error(`'${query}'에 대한 검색 결과를 찾지 못했습니다.`);
+        throw new Error('검색 결과 목록을 추출하지 못했습니다.');
       }
       return candidates;
     }
 
-    // 2단계: 모바일 상세 페이지(m.10000recipe.com/recipe/ID)에서 JSON-LD 및 재료·조리법 추출
+    // 2단계: Jina Reader로 상세 페이지 본문을 읽어 재료와 조리 순서 추출
     async function fetch10000RecipeDetail(candidate, fallbackQuery) {
       const detailUrl = `https://m.10000recipe.com/recipe/${candidate.recipeId}`;
-      const html = await fetchHtmlFast(detailUrl);
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const md = await fetchViaJinaReader(detailUrl);
+      return parse10000MarkdownOrText(md, candidate.title || fallbackQuery, detailUrl, candidate.recipeId);
+    }
 
-      let name = candidate.title;
+    // Jina 마크다운 및 직접 붙여넣은 웹페이지 텍스트를 모두 처리하는 통합 파서
+    function parse10000MarkdownOrText(rawText, fallbackTitle, sourceUrl, idSuffix) {
+      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+
+      let title = fallbackTitle;
+      const titleLine = lines.find(l => l.startsWith('Title:') || l.startsWith('# '));
+      if (titleLine) {
+        title = titleLine.replace(/^Title:\s*|^#\s*/, '').replace(/\s*[-|]\s*만개의레시피.*$/, '').trim();
+      }
+
+      // 이미지 URL 추출
+      let thumb = '';
+      const imgMatch = rawText.match(/!\[.*?\]\((https?:\/\/recipe1\.ezmember\.co\.kr\/cache\/recipe\/[^)]+)\)/);
+      if (imgMatch) thumb = imgMatch[1];
+
+      // 인분 & 소요시간 추출
       let servings = 2;
       let time = '20분';
-      let thumb = candidate.thumb;
-      let ingredients = [];
-      let steps = [];
+      const servMatch = rawText.match(/(\d+)\s*인분/);
+      if (servMatch) servings = Number(servMatch[1]) || 2;
+      const timeMatch = rawText.match(/(\d+\s*분\s*이내|\d+\s*시간|\d+\s*분)/);
+      if (timeMatch) time = timeMatch[1];
 
-      // 1순위: Schema.org JSON-LD (모바일/PC 공통 표준 데이터)
-      const ldScripts = Array.from(doc.querySelectorAll('script[type="application/ld+json"]'));
-      for (const s of ldScripts) {
-        try {
-          const parsed = JSON.parse(s.textContent);
-          const item = Array.isArray(parsed) ? parsed.find(x => x['@type'] === 'Recipe') : (parsed['@type'] === 'Recipe' ? parsed : null);
-          if (item) {
-            if (item.name) name = item.name.trim();
-            if (item.image) thumb = Array.isArray(item.image) ? item.image[0] : item.image;
-            if (item.recipeYield) {
-              const yMatch = String(item.recipeYield).match(/(\d+)/);
-              if (yMatch) servings = Number(yMatch[1]) || 2;
-            }
-            if (Array.isArray(item.recipeIngredient) && item.recipeIngredient.length > 0) {
-              ingredients = item.recipeIngredient.map(line => parseIngredientText(line));
-            }
-            if (Array.isArray(item.recipeInstructions) && item.recipeInstructions.length > 0) {
-              steps = item.recipeInstructions.map(inst => typeof inst === 'string' ? inst.trim() : (inst.text || '').trim()).filter(Boolean);
-            }
-            break;
+      // 재료 추출 ("재료" 섹션 이후부터 "조리순서" 이전까지)
+      const ingredients = [];
+      let inIngSection = false;
+      let inStepSection = false;
+      const steps = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (/^\[?재료\]?$|^재료\s*Ingredients/i.test(line)) {
+          inIngSection = true;
+          inStepSection = false;
+          continue;
+        }
+        if (/^조리순서|^만드는\s*법|^Step\s*1/i.test(line)) {
+          inIngSection = false;
+          inStepSection = true;
+        }
+
+        if (inIngSection) {
+          if (/^\[.*\]$/.test(line) || line.includes('계량법 안내') || line.includes('구매')) continue;
+          // 마크다운 리스트 "- 돼지고기 300g" 또는 표 형태 "| 돼지고기 | 300g |"
+          const tableMatch = line.match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
+          if (tableMatch && !tableMatch[1].includes('---')) {
+            ingredients.push(parseIngredientText('', tableMatch[1], tableMatch[2]));
+            continue;
           }
-        } catch (e) {}
-      }
-
-      // 2순위: 모바일 DOM 재료 리스트 보완
-      const domIngItems = Array.from(doc.querySelectorAll('#divConfirmedMaterialArea li, .ready_ingre3 ul li, .view_ingre li, .ingre_list li'));
-      if (domIngItems.length > 0) {
-        const domParsed = [];
-        domIngItems.forEach(li => {
-          const nEl = li.querySelector('.ingre_list_name, a, span:first-child');
-          const aEl = li.querySelector('.ingre_list_ea, span.ingre_unit, span:last-child');
-          if (nEl) {
-            const iName = nEl.textContent.replace(/\s+/g, ' ').trim();
-            const iAmt = (aEl && aEl !== nEl) ? aEl.textContent.replace(/\s+/g, ' ').trim() : '';
-            if (iName) domParsed.push(parseIngredientText('', iName, iAmt));
+          // 단위 패턴이 포함된 줄 추출
+          if (/\d+\s*(g|kg|ml|L|큰술|작은술|스푼|컵|개|모|대|쪽|마리|봉|장|포기|줌|꼬집)|약간|조금|적당량/.test(line) && line.length < 40) {
+            const cleanLine = line.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+            ingredients.push(parseIngredientText(cleanLine));
           }
-        });
-        if (domParsed.length > 0) ingredients = domParsed;
+        } else if (inStepSection) {
+          if (line.includes('등록일') || line.includes('댓글') || line.includes('레시피 작성자') || line.includes('태그')) break;
+          const cleanStep = line.replace(/!\[.*?\]\(.*?\)/g, '').replace(/^\d+[\.\)]\s*/, '').trim();
+          if (cleanStep.length >= 8 && !cleanStep.startsWith('http') && !cleanStep.startsWith('[')) {
+            steps.push(cleanStep);
+          }
+        }
       }
 
-      if (steps.length === 0) {
-        const stepEls = Array.from(doc.querySelectorAll('[id^="stepdescr"], .view_step_cont .media-body, .step_list li'));
-        steps = stepEls.map(el => el.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean);
+      // 만약 섹션 헤더를 못 찾았더라도 전체 텍스트에서 계량 단위 줄 자동 수집
+      if (ingredients.length === 0) {
+        for (const line of lines) {
+          if (line.length < 35 && /^[-*•]?\s*[가-힣a-zA-Z\s]+\s+\d+(?:\/\d+|\.\d+)?\s*(g|ml|큰술|작은술|개|모|대|쪽|마리|봉|장|포기)/.test(line)) {
+            ingredients.push(parseIngredientText(line));
+          }
+        }
       }
-
-      const info1 = doc.querySelector('.view2_summary_info1')?.textContent || '';
-      const info2 = doc.querySelector('.view2_summary_info2')?.textContent || '';
-      const sMatch = info1.match(/(\d+)/);
-      if (sMatch) servings = Number(sMatch[1]) || servings;
-      if (info2.trim()) time = info2.trim();
 
       const spicyWords = ['매운', '청양고추', '고추장', '고춧가루', '불닭', '마라', '매콤', '김치', '떡볶이', '제육'];
-      const fullHay = (name + ' ' + ingredients.map(i => i.name).join(' ')).toLowerCase();
-      const isSpicy = spicyWords.some(w => fullHay.includes(w)) && !name.includes('안 매운') && !name.includes('아이');
+      const fullHay = (title + ' ' + ingredients.map(i => i.name).join(' ')).toLowerCase();
+      const isSpicy = spicyWords.some(w => fullHay.includes(w)) && !title.includes('안 매운') && !title.includes('아이');
 
       return normalizeRecipe({
-        id: '10k_' + candidate.recipeId,
-        name: name || fallbackQuery,
+        id: '10k_' + (idSuffix || Date.now()),
+        name: title || fallbackTitle,
         category: '한식',
         servings,
         time,
         spicy: isSpicy,
         thumb,
-        sourceUrl: detailUrl,
-        recommendCount: candidate.meta,
-        ingredients: ingredients.length > 0 ? ingredients : [{ name: fallbackQuery, amount: 1, unit: '인분' }],
-        steps: steps.length > 0 ? steps : ['상세 조리법은 상단 원본 링크를 참고해 주세요.']
+        sourceUrl: sourceUrl || 'https://m.10000recipe.com',
+        ingredients: ingredients.length > 0 ? ingredients : [{ name: fallbackTitle, amount: 1, unit: '인분' }],
+        steps: steps.length > 0 ? steps : ['상단 원본보기 링크를 눌러 상세 조리 사진을 확인해 주세요.']
       }, 0);
+    }
+
+    // 사용자가 만개의레시피 본문을 직접 복사해 붙여넣었을 때 실행
+    function parsePasted10000Text() {
+      const raw = document.getElementById('paste-recipe-box').value.trim();
+      if (!raw || raw.length < 15) {
+        return alert('만개의레시피 페이지에서 복사한 레시피 텍스트를 입력창에 먼저 붙여넣어 주세요.');
+      }
+      const firstLine = raw.split('\n').map(s => s.trim()).find(s => s.length >= 2 && !s.includes('만개의레시피')) || '가져온 레시피';
+      const parsed = parse10000MarkdownOrText(raw, firstLine, 'https://m.10000recipe.com', Date.now());
+      window.lastAiRecipe = parsed;
+
+      const box = document.getElementById('ai-result-box');
+      box.classList.remove('hidden');
+      render10000ResultCard(parsed, [], 0, '붙여넣기 자동 변환');
+      box.scrollIntoView({ behavior: 'smooth' });
     }
 
     async function searchOnlineRecipe(forceRefresh = false) {
       const query = document.getElementById('ai-query').value.trim();
       if (!query) return alert('검색할 요리명이나 재료를 입력해 주세요.');
+
+      const directLink = document.getElementById('direct-10000-link');
+      if (directLink) {
+        directLink.href = `https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco`;
+      }
 
       const box = document.getElementById('ai-result-box');
       const cacheKey = query.toLowerCase();
@@ -1378,10 +1391,10 @@
       box.innerHTML = `
         <div class="bg-white rounded-2xl p-5 border-2 border-emerald-500 shadow-sm space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-emerald-700 animate-pulse">🏆 m.10000recipe.com에서 '${query}' 추천순 1위 추출 중...</span>
-            <span class="text-[11px] text-slate-400">최대 12초</span>
+            <span class="text-xs font-extrabold text-emerald-700 animate-pulse">🏆 만개의레시피에서 '${query}' 추천순 1위 가져오는 중...</span>
+            <span class="text-[11px] text-slate-400">헤드리스 추출</span>
           </div>
-          <p class="text-xs text-slate-500">모바일 페이지에서 추천수가 가장 많은 레시피의 재료와 계량 수치를 분석하고 있습니다.</p>
+          <p class="text-xs text-slate-500">추천수가 가장 높은 레시피의 계량 재료와 조리 순서를 분석하고 있습니다.</p>
         </div>
       `;
 
@@ -1394,16 +1407,18 @@
         window.lastAiRecipe = bestRecipe;
 
         recipe10000Cache[cacheKey] = { recipe: bestRecipe, candidates };
-        localStorage.setItem('kitchen_10000_cache_v2', JSON.stringify(recipe10000Cache));
+        localStorage.setItem('kitchen_10000_cache_v3', JSON.stringify(recipe10000Cache));
 
         render10000ResultCard(bestRecipe, candidates, 0, elapsed);
       } catch (e) {
         box.innerHTML = `
-          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-xs space-y-2.5">
-            <p class="font-bold">⚠️ 추출 실패: ${e.message}</p>
-            <p class="text-[11px] text-rose-600 leading-relaxed">만개의레시피 서버가 일시적으로 외부 프록시 접근을 제한한 상태입니다. 아래 버튼으로 검색 결과를 직접 열거나 잠시 후 다시 시도해 주세요.</p>
-            <a href="https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco" target="_blank" class="inline-block bg-emerald-600 text-white font-bold px-3.5 py-2 rounded-xl shadow">
-              🌐 만개의레시피 추천순 결과 페이지 바로 열기 ↗
+          <div class="bg-amber-50 border border-amber-300 text-amber-900 p-4 rounded-2xl text-xs space-y-2.5">
+            <p class="font-extrabold">⚠️ 만개의레시피 서버가 자동 수집 요청을 일시 제한했습니다.</p>
+            <p class="text-[11px] text-amber-800 leading-relaxed">
+              아래 초록색 버튼을 눌러 내 폰에서 <strong>'${query}' 추천순 1위 레시피</strong>를 여신 뒤, 본문을 복사해 바로 아래 <strong>[📋 본문 붙여넣기 변환기]</strong>에 넣으시면 100% 똑같이 인분 계산기로 변환됩니다!
+            </p>
+            <a href="https://m.10000recipe.com/recipe/list.html?q=${encodeURIComponent(query)}&order=reco" target="_blank" class="inline-block bg-emerald-600 text-white font-extrabold px-4 py-2.5 rounded-xl shadow">
+              🏆 내 폰에서 '${query}' 추천순 결과 열기 ↗
             </a>
           </div>
         `;
@@ -1423,7 +1438,7 @@
         window.lastAiRecipe = recipe;
         render10000ResultCard(recipe, currentTopCandidates, rankIdx, `추천 ${rankIdx + 1}위`);
       } catch (e) {
-        alert('레시피 상세 정보를 불러오지 못했습니다.');
+        alert('상세 정보를 불러오지 못했습니다. 원본 링크에서 복사 후 붙여넣기를 이용해 주세요.');
       }
     }
 
@@ -1454,7 +1469,7 @@
             <div class="w-full h-44 bg-slate-900 relative">
               <img src="https://wsrv.nl/?url=${encodeURIComponent(clean.thumb)}&w=600&output=webp" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.parentElement.style.display='none'">
               <span class="absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow">
-                🏆 만개의레시피 추천 ${activeRankIdx + 1}위 (${elapsedLabel})
+                🏆 만개의레시피 (${elapsedLabel})
               </span>
             </div>
           ` : ''}
